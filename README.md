@@ -14,3 +14,9 @@ Things that might be done in the future:
 
 * An endpoint implementation
 
+## Quickstart
+
+```
+> go test
+```
+
