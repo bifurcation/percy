@@ -101,6 +101,7 @@ func NewMDD(kmf KMFTunnel) *MDD {
 	return mdd
 }
 
+// XXX: Dead method until we route DTLS packets more intelligently
 func (mdd *MDD) handleDTLS(assocID AssociationID, msg []byte) {
 	// Rough check for ClientHello
 	ch := len(msg) >= 14 && msg[0] == 0x16 && msg[13] == 0x01
@@ -112,11 +113,7 @@ func (mdd *MDD) handleDTLS(assocID AssociationID, msg []byte) {
 	}
 }
 
-func (mdd *MDD) handleSRTP(clientID string, msg []byte) {
-	if mdd.keys != nil && mdd.profile != 0 {
-		// XXX: Here's where you mess with the packet if you want to
-	}
-
+func (mdd *MDD) broadcast(clientID string, msg []byte) {
 	// Send the packet out to all the clients except
 	// the one that sent it
 	for client, addr := range mdd.clients {
@@ -183,13 +180,20 @@ func (mdd *MDD) Listen(port int) error {
 				mdd.clients[clientID] = pkt.addr
 			}
 
+			// XXX: For now, all packets are re-broadcast, which means
+			// this will only really work in cases where there are only
+			// two clients.
+			//
+			// XXX: DTLS packets can be routed to a local DTLS stack as
+			// soon as we have one, and can get the keys out to
+			// re-encrypt.
+			//
+			// XXX: Handling STUN locally will require routing SDP
+			// offer/answer via the MD, so that it can grab the ICE ufrag
+			// and password and use them to synthesize STUN responses.
 			switch packetClass(pkt.msg) {
-			case packetClassDTLS:
-				mdd.handleDTLS(assocID, pkt.msg)
-			case packetClassSRTP:
-				mdd.handleSRTP(clientID, pkt.msg)
-			case packetClassSTUN:
-				fallthrough
+			case packetClassDTLS, packetClassSTUN, packetClassSRTP:
+				mdd.broadcast(clientID, pkt.msg)
 			default:
 				log.Printf("Unknown packet type received")
 			}
@@ -201,10 +205,6 @@ func (mdd *MDD) Listen(port int) error {
 
 func (mdd *MDD) Send(assoc AssociationID, msg []byte) error {
 	clientID := assocToString(assoc)
-
-	if packetClass(msg) != packetClassDTLS {
-		return fmt.Errorf("Send called with non-DTLS packet")
-	}
 
 	addr, ok := mdd.clients[clientID]
 	if !ok {
