@@ -1,18 +1,46 @@
 percy
 =====
 
-This repo is for a Go module implementing chunks of the
+This repo is for a Go module implementing a minimal subset of the
 [PERC](https://tools.ietf.org/wg/perc) architecture for secure conferencing.
-Things that are in progress now:
 
-* An MDD that can selectively forward DTLS packets to a KMF and switch SRTP
-  packets between endpoints.
+Right now, we have the following components available:
 
-Things that might be done in the future:
+* An skeleton MD in Go that can discriminate between STUN, DTLS, and
+  SRTP packets and forward them appropriately.  In the long run:
+  * STUN packets should be handled directly by the MD
+  * DTLS packets should be forwarded between the client and the KD
+  * SRTP packets should be broadcast to conference participants
 
-* A KMF that can set up associations with endpoints
+* A CGo wrapper around [OpenSSL](https://github.com/openssl/openssl)
+  that provides DTLS negotiation.
 
-* An endpoint implementation
+* A CGo wrapper around [libsrtp](https://github.com/cisco/libstrp)
+  that provides SRTP encryption / decryption.
+
+* A small WebRTC app that demonstrates one-to-one media between two
+  peers, relayed via this server.
+
+Right now, 1-1 "conferencing" works, via the simple WebRTC app
+included.  But that's just because the only thing the server does
+right now is switch packets.  (It doesn't even give different
+treatment to different packet classes.)
+
+In order to get conferencing working (even without PERC), we would
+need:
+
+* STUN termination, which requires reading the SDP offer sent by a
+  connecting endpoint toget the ICE `ufrag` and `pwd` attributes
+
+* DTLS termination, which requires synthesizing the SDP answer for
+  the conference to set the `setup` and `fingerprint` attributes.
+
+* SRTP re-encryption, to bridge between different DTLS associations.
+
+Once we have those pieces in place, transitioning to PERC is a
+simple matter of the KD lying to the MD -- telling it to use AES-GCM
+when in fact AES-GCM-double was negotiated.
+
 
 ## Quickstart
 
