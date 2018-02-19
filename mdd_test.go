@@ -1,37 +1,12 @@
 package percy
 
+// TODO Re-enable unit tests
+/*
 import (
 	"fmt"
 	"testing"
 )
 
-type NoopTunnel bool
-
-func (tun NoopTunnel) Send(assoc AssociationID, msg []byte) error {
-	return nil
-}
-
-func (tun NoopTunnel) SendWithProfiles(assoc AssociationID, msg []byte, profiles []ProtectionProfile) error {
-	return nil
-}
-
-func TestMain(t *testing.T) {
-	tunnel := NoopTunnel(false)
-	mdd := NewMDD(tunnel)
-	err := mdd.Listen(4430)
-	if err != nil {
-		panic(err)
-	}
-	defer mdd.Stop()
-
-	fmt.Println("Listening, press <enter> to stop")
-
-	var input string
-	fmt.Scanln(&input)
-}
-
-// TODO Re-enable unit tests
-/*
 type Client struct {
 	RecvChan chan []byte
 

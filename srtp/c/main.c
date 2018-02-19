@@ -9,17 +9,20 @@ int main() {
     return 1;
   }
 
-  srtp_t send, recv;
   int ciphersuite = srtp_profile_aes128_cm_sha1_80;
   size_t key_len = 30;
   uint8_t key[30] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x10, 0x11,
                      0x12, 0x13, 0x14, 0x15, 0x20, 0x21, 0x22, 0x23,
                      0x24, 0x25, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35};
-  if (!go_srtp_create(&send, ssrc_any_outbound, ciphersuite, key, key_len)) {
+
+  srtp_t send = go_srtp_create(ssrc_any_outbound, ciphersuite, key, key_len);
+  if (!send) {
     fprintf(stderr, "Error initializing sender\n");
     return 1;
   }
-  if (!go_srtp_create(&recv, ssrc_any_inbound, ciphersuite, key, key_len)) {
+
+  srtp_t recv = go_srtp_create(ssrc_any_inbound, ciphersuite, key, key_len);
+  if (!recv) {
     fprintf(stderr, "Error initializing receiver\n");
     return 1;
   }

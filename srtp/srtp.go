@@ -3,7 +3,6 @@ package srtp
 // XXX(rlb@ipv.sx) Similar comments here to those in dtls.go
 
 /*
-
 #cgo darwin CFLAGS: -I/Users/richbarn/Projects/libsrtp/include
 #cgo darwin LDFLAGS: -L/Users/richbarn/Projects/libsrtp -lsrtp2
 
@@ -53,7 +52,7 @@ type SRTP struct {
 	ctx *C.struct_srtp_ctx_t_
 }
 
-func NewSRTP(ssrc_type, ciphersuite int, key []byte) (*SRTP, error) {
+func NewSRTP(ssrc_type, profile int, key []byte) (*SRTP, error) {
 	if !libsrtpInitialized {
 		C.go_srtp_init()
 		libsrtpInitialized = true
@@ -61,14 +60,19 @@ func NewSRTP(ssrc_type, ciphersuite int, key []byte) (*SRTP, error) {
 
 	s := SRTP{}
 	ptr := (*C.uint8_t)(unsafe.Pointer(&key[0]))
-	err := C.go_srtp_create(&s.ctx, C.int(ssrc_type), C.int(ciphersuite), ptr, C.size_t(len(key)))
-	if err == 0 {
+
+	s.ctx = C.go_srtp_create(C.int(ssrc_type), C.int(profile), ptr, C.size_t(len(key)))
+	if s.ctx == nil {
 		return nil, errors.New("Could not create libsrtp context")
 	}
 	return &s, nil
 }
 
 func (s *SRTP) Close() {
+	if s == nil || s.ctx == nil {
+		return
+	}
+
 	C.go_srtp_free(s.ctx)
 }
 

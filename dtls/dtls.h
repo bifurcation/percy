@@ -8,7 +8,7 @@ typedef struct DTLSParamsStr DTLSParams;
 DTLSParams* dtls_client(const char* key, const char* cert);
 DTLSParams* dtls_server(const char* key, const char* cert);
 void dtls_free(DTLSParams* params);
-void dtls_kick(DTLSParams* params);
+int dtls_kick(DTLSParams* params);
 void dtls_send(DTLSParams* params, void* packet, size_t packet_size);
 int dtls_recv(DTLSParams* params, void* packet, size_t max_size);
 int dtls_done(DTLSParams* params);

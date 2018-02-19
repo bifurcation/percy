@@ -2,6 +2,7 @@
 #include <arpa/inet.h>
 #include <srtp.h>
 #include <stdio.h>
+#include <string.h>
 
 #define SRTP_AES128_CM_SHA1_80 0x0001
 #define SRTP_AES128_CM_SHA1_32 0x0002
@@ -19,21 +20,22 @@ int go_srtp_salt_length(int profile) {
   return srtp_profile_get_master_salt_length(profile);
 }
 
-int go_srtp_create(srtp_t* session, int type, int profile,
-                   const uint8_t* key, size_t len) {
+srtp_t go_srtp_create(int type, int profile, const uint8_t* key, size_t len) {
   int err;
+
   srtp_policy_t policy;
+  memset(&policy, 0, sizeof(policy));
 
   err = srtp_crypto_policy_set_from_profile_for_rtp(&policy.rtp, profile);
   if (err != srtp_err_status_ok) {
-      fprintf(stderr, "Unable to set crypto policy for RTP %d\n", err);
-    return 0;
+    fprintf(stderr, "Unable to set crypto policy for RTP %d\n", err);
+    return NULL;
   }
 
   err = srtp_crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, profile);
   if (err != srtp_err_status_ok) {
-      fprintf(stderr, "Unable to set crypto policy for RTCP %d\n", err);
-    return 0;
+    fprintf(stderr, "Unable to set crypto policy for RTCP %d\n", err);
+    return NULL;
   }
 
   // Cargo-culted from webrtc.org: srtpfilter.cc
@@ -44,18 +46,17 @@ int go_srtp_create(srtp_t* session, int type, int profile,
   policy.allow_repeat_tx = 1;
   policy.next = NULL;
 
-  err = srtp_create(session, &policy);
+  srtp_t session = NULL;
+  err = srtp_create(&session, &policy);
   if (err != srtp_err_status_ok) {
     fprintf(stderr, "Failed to create SRTP session %d\n", err);
-    return 0;
+    return NULL;
   }
 
-  return 1;
+  return session;
 }
 
-void go_srtp_free(srtp_t session) {
-  srtp_dealloc(session);
-}
+void go_srtp_free(srtp_t session) { srtp_dealloc(session); }
 
 // Caller should make sure that packet has SRTP_MAX_TRAILER_LEN
 // octets free after the end of the RTP data, into which

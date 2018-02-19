@@ -147,7 +147,14 @@ void dtls_free(DTLSParams* params) {
   free(params);
 }
 
-void dtls_kick(DTLSParams* params) { SSL_do_handshake(params->ssl); }
+int dtls_kick(DTLSParams* params) {
+  int ret = SSL_do_handshake(params->ssl);
+  if (ret < 0) {
+    int err = SSL_get_error(params->ssl, ret);
+    ERR_print_errors_fp(stderr);
+  }
+  return ret;
+}
 
 void dtls_send(DTLSParams* params, void* packet, size_t packet_size) {
   BIO_write(params->bio_in, packet, packet_size);

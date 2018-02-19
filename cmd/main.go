@@ -1,8 +1,9 @@
 package main
 
 import (
-	".."
 	"fmt"
+
+	"github.com/bifurcation/percy"
 )
 
 type NoopTunnel bool
