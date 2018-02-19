@@ -18,7 +18,8 @@
 // ssrc_any_outbound
 
 int go_srtp_init();
-int go_srtp_key_size(int profile);
+int go_srtp_key_length(int profile);
+int go_srtp_salt_length(int profile);
 int go_srtp_create(srtp_ctx_t** session, int type, int profile,
                    const uint8_t* key, size_t len);
 void go_srtp_free(srtp_ctx_t* session);

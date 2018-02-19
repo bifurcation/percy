@@ -1,8 +1,9 @@
 package dtls
 
 import (
-	"bytes"
 	"testing"
+
+	"github.com/bifurcation/percy/assert"
 )
 
 const (
@@ -16,15 +17,11 @@ func TestDTLS(t *testing.T) {
 	// Initialize client and server instances
 	client, err := NewDTLSClient(keyFile, certFile)
 	defer client.Close()
-	if err != nil {
-		t.Fatalf("Error creating DTLS client: %v", err)
-	}
+	assert.NotError(t, err, "Error creating DTLS client")
 
 	server, err := NewDTLSServer(keyFile, certFile)
 	defer server.Close()
-	if err != nil {
-		t.Fatalf("Error creating DTLS server: %v", err)
-	}
+	assert.NotError(t, err, "Error creating DTLS server")
 
 	// Broker a DTLS handshake
 	rtt := 0
@@ -48,20 +45,14 @@ func TestDTLS(t *testing.T) {
 	}
 
 	// Verify that it succeeded
-	if rtt == maxRTT {
-		t.Fatalf("Handshake failed to converge")
-	}
+	assert.NotEqual(t, rtt, maxRTT, "Handshake failed to converge")
 
 	// Verify that we get matching SRTP parameters
 	clientProfile := client.SRTPProfile()
 	serverProfile := server.SRTPProfile()
-	if clientProfile != serverProfile {
-		t.Fatalf("SRTP profile mismatch [%04x] != [%04x]", clientProfile, serverProfile)
-	}
+	assert.Equal(t, clientProfile, serverProfile, "SRTP profile mismatch")
 
 	clientKey := client.SRTPKey(srtpKeySize)
 	serverKey := server.SRTPKey(srtpKeySize)
-	if !bytes.Equal(clientKey, serverKey) {
-		t.Fatalf("SRTP key mismatch [%x] != [%x]", clientKey, serverKey)
-	}
+	assert.BytesEqual(t, clientKey, serverKey, "SRTP key mismatch")
 }

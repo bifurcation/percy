@@ -11,13 +11,12 @@ const size_t SRTP_TRAILER_SIZE = SRTP_MAX_TRAILER_LEN;
 
 int go_srtp_init() { return srtp_init(); }
 
-int go_srtp_key_size(int profile) {
-  int key_len = srtp_profile_get_master_key_length(profile);
-  int salt_len = srtp_profile_get_master_salt_length(profile);
-  if (key_len == 0 || salt_len == 0) {
-    return 0;
-  }
-  return key_len + salt_len;
+int go_srtp_key_length(int profile) {
+  return srtp_profile_get_master_key_length(profile);
+}
+
+int go_srtp_salt_length(int profile) {
+  return srtp_profile_get_master_salt_length(profile);
 }
 
 int go_srtp_create(srtp_t* session, int type, int profile,

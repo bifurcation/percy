@@ -13,7 +13,6 @@ import "C"
 
 import (
 	"errors"
-	"fmt"
 	"unsafe"
 )
 
@@ -35,11 +34,19 @@ const (
 )
 
 func KeyLength(profile int) (int, error) {
-	keyLen := int(C.go_srtp_key_size(C.int(profile)))
+	keyLen := int(C.go_srtp_key_length(C.int(profile)))
 	if keyLen == 0 {
 		return 0, errors.New("Unknown ciphersuite")
 	}
 	return keyLen, nil
+}
+
+func SaltLength(profile int) (int, error) {
+	saltLen := int(C.go_srtp_salt_length(C.int(profile)))
+	if saltLen == 0 {
+		return 0, errors.New("Unknown ciphersuite")
+	}
+	return saltLen, nil
 }
 
 type SRTP struct {
