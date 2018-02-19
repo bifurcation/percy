@@ -1,0 +1,91 @@
+<!doctype html5>
+<html>
+
+<head>
+<title>WebRTC Hello World</title>
+<script src="index.js"></script>
+<style>
+body {
+  background: white;
+  font-family: Helvetica Neue, sans-serif; 
+  width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+h1 {
+  color: #b0b;
+  border-bottom: 3px solid #b0b;
+  text-align: left;
+}
+
+pre {
+  background: #eee;
+  border: 1px solid #ccc;
+  text-align: left;
+  padding: 1ex;
+}
+
+button {
+  font-family: Helvetica Neue, sans-serif; 
+  background: #b0b;
+  color: #fff;
+  padding: 1ex 1em;
+  border: 1px solid #b0b;
+}
+
+table {
+  width: 100%;
+  text-align: center;
+}
+
+textarea {
+  width: 350px;
+  height: 200px;
+  border: 1px solid #b0b;
+  font-family: Monaco, monospace;
+  font-size: 8px;
+}
+
+video {
+  width: 350px;
+  height: 200px;
+  border: 1px solid black;
+}
+</style>
+</head>
+
+<body>
+
+<h1>WebRTC Hello World</h1>
+
+<pre>
+&gt; socat UDP-LISTEN:4430 UDP-LISTEN:4431
+</pre>
+
+<table>
+  <tr>
+    <td colspan=2>
+    <button id="run">Run</button>
+    </td>
+  </tr>
+  <tr>
+    <td><textarea id="offer"></textarea></td>
+    <td><textarea id="answer"></textarea></td>
+  </tr>
+  <tr>
+    <td><textarea id="offerICE"></textarea></td>
+    <td><textarea id="answerICE"></textarea></td>
+  </tr>
+  <tr>
+    <td><b>Local</b></td>
+    <td><b>Remote</b></td>
+  </tr>
+  <tr>
+    <td><video id="local" autoplay muted></textarea><br/></td>
+    <td><video id="remote" autoplay></textarea><br/></td>
+  </tr>
+</table>
+
+</body>
+</html>

@@ -25,5 +25,12 @@ Things that might be done in the future:
 # Build and run self-tests
 > go build ./...
 > go test ./...
+
+# Run the example WebRTC app
+> cd cmd && go run main.go
+# Open in Firefox: https://localhost:4430/
+# Click through certificate warning
+# Click "Run"
+# If you get two videos, it worked
 ```
 
