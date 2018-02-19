@@ -1,15 +1,8 @@
 package dtls
 
-// XXX(rlb@ipv.sx) The below flags link to my personal checkout of
-// openssl, because I get errors when I build against the homebrew
-// version.  I think it might not have DTLS enabled in its build
-// flags.  In any case, we're probably going to want to build
-// against custom versions anyway, as we add support for things like
-// EKT.
-
 /*
-#cgo darwin CFLAGS: -I/Users/richbarn/Projects/openssl/include
-#cgo darwin LDFLAGS: -L/Users/richbarn/Projects/openssl/lib -lssl -lcrypto
+#cgo darwin CFLAGS: -I../third-party/openssl/include
+#cgo darwin LDFLAGS: -L../third-party/openssl/ -lssl -lcrypto
 
 #include "dtls.h"
 */

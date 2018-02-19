@@ -1,10 +1,8 @@
 package srtp
 
-// XXX(rlb@ipv.sx) Similar comments here to those in dtls.go
-
 /*
-#cgo darwin CFLAGS: -I/Users/richbarn/Projects/libsrtp/include
-#cgo darwin LDFLAGS: -L/Users/richbarn/Projects/libsrtp -lsrtp2
+#cgo darwin CFLAGS: -I../third-party/libsrtp/include
+#cgo darwin LDFLAGS: -L../third-party/libsrtp -lsrtp2
 
 #include "go_srtp.h"
 */
