@@ -2,8 +2,15 @@ package main
 
 import (
 	"fmt"
+	//"net/http"
 
 	"github.com/bifurcation/percy"
+)
+
+var (
+	port     = 4430
+	htmlFile = "../www/index.html"
+	jsFile   = "../www/index.js"
 )
 
 type NoopTunnel bool
@@ -16,6 +23,21 @@ func (tun NoopTunnel) SendWithProfiles(assoc percy.AssociationID, msg []byte, pr
 	return nil
 }
 
+/*
+func httpServer() *http.Server {
+	// TODO Read HTML file
+	html := "html"
+
+	// TODO Read JS, sub in address / port
+	js := "js"
+
+	// TODO Generate a self-signed certificate
+
+	// Start up a web server
+	return nil
+}
+*/
+
 func main() {
 	tunnel := NoopTunnel(false)
 	mdd := percy.NewMDD(tunnel)
@@ -24,6 +46,9 @@ func main() {
 		panic(err)
 	}
 	defer mdd.Stop()
+
+	//srv := httpServer()
+	//defer srv.Shutdown(nil)
 
 	fmt.Println("Listening, press <enter> to stop")
 

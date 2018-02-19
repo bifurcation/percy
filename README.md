@@ -19,7 +19,7 @@ Things that might be done in the future:
 ```
 # Fetch and build C dependencies
 > git submodule update --init
-> cd third-party/openssl && ./config && make && cd ../..
+> cd third-party/openssl && ./config -static && make && cd ../..
 > cd third-party/libsrtp && ./configure && make && cd ../..
 
 # Build and run self-tests

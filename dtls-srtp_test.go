@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	keyFile       = "./dtls/key.pem"
-	certFile      = "./dtls/cert.pem"
+	keyFile       = "./static/key.pem"
+	certFile      = "./static/cert.pem"
 	maxRTT        = 5
 	ssrc1         = 0x01020304
 	ssrc2         = 0x05060708

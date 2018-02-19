@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	keyFile     = "key.pem"
-	certFile    = "cert.pem"
+	keyFile     = "../static/key.pem"
+	certFile    = "../static/cert.pem"
 	maxRTT      = 20
 	srtpKeySize = 60
 )
