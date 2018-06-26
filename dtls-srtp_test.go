@@ -1,5 +1,6 @@
 package percy
 
+/*
 import (
 	"testing"
 
@@ -169,3 +170,4 @@ func TestDTLSSRTP(t *testing.T) {
 	assert.BytesEqual(t, packetB2, packetB4, "R1 -> C1 failed")
 	assert.BytesEqual(t, packetB0, packetB4, "C2 -> C1 failed")
 }
+*/
