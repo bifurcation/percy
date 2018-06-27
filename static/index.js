@@ -4,6 +4,8 @@ let gUMConfig = { "audio": false, "video": true };
 const IP_PORT_REGEX = /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+\d+/;
 const RELAY_IP = "RELAY_IP_FROM_GO_SERVER";
 const RELAY_PORT = "RELAY_PORT_FROM_GO_SERVER";
+const IPV6_REGEX = RegExp('\:[0-9a-f]*\:[0-9a-fA-f]*','g');
+const TCP_REGEX = RegExp('.*tcptype.*','g');
 
 // Handy element access
 let page = {
@@ -16,27 +18,48 @@ let page = {
   get remote() { return document.getElementById("remote"); },
 };
 
-/*
-{
-  "candidate": "candidate:0 1 UDP 2122252543 192.168.1.5 53149 typ host",
-  "sdpMid": "sdparta_0",
-  "sdpMLineIndex": 0
-}
-*/
+
 function rewrite(c, host, port) {
   c.candidate = c.candidate.replace(IP_PORT_REGEX, `${host} ${port}`);
   return c;
 }
 
-function rewrite_answer(cin) {
-  return cin;
-}
-
 function run() {
   let offerer = new RTCPeerConnection();
-  let answerer = new RTCPeerConnection();
-  
+
   console.log("wtf?");
+
+  const socket = new WebSocket('wss://localhost:' + RELAY_PORT + '/ws');
+
+  var answer_set;
+  var answer_is_set = new Promise(r => answer_set = r);
+
+  var offer_set;
+  var offer_is_set = new Promise(r => offer_set = r);
+
+  var ice_candidate_set;
+  var ice_candidate_is_set = new Promise(r => ice_candidate_set = r);
+
+  socket.addEventListener('open', (e) => {
+    offer_is_set.then((offer) => {
+      console.log('Sending offer to percy');
+      socket.send(offer);
+    })
+  })
+
+  socket.addEventListener('message', (e) => {
+    console.log(e.data);
+    message = JSON.parse(e.data);
+    if(message.type === "sdp") {
+      console.log('SDP from percy: ', message.data);
+      page.answer.value = message.data;
+      answer_set(message.data);
+    } else if(message.type === "ice") {
+      console.log("ice-candidates from percy: ", message.data);
+      page.answerICE.value = JSON.stringify(message.data, null, 2) + "\n\n";
+      ice_candidate_set(message.data);
+    }
+  })
 
   navigator.mediaDevices.getUserMedia({video: true, audio: false})
     .then(stream => {
@@ -44,41 +67,37 @@ function run() {
       page.local.srcObject = stream;
       offerer.addStream(stream);
     });
-  
-  answerer.ontrack = e => {
-    console.log("got remote stream");
-    page.remote.srcObject = e.streams[0];
-  }
-  
+
   offerer.onicecandidate = e => {
-    if (!e.candidate) { return; }
-    console.log("got offerer ICE candidate");
-    let candidate = rewrite(e.candidate, RELAY_IP, RELAY_PORT);
-    page.offerICE.value += JSON.stringify(candidate, null, 2) + "\n\n";
-    answerer.addIceCandidate(candidate);
+    console.log("dropping local ICE candidate: " + JSON.stringify(e.candidate));
+    return;
   }
 
-  answerer.onicecandidate = e => {
-    if (!e.candidate) { return; }
-    console.log("got answerer ICE candidate");
-    let candidate = rewrite(e.candidate, RELAY_IP, RELAY_PORT);
-    page.answerICE.value += JSON.stringify(candidate, null, 2) + "\n\n";
-    offerer.addIceCandidate(candidate);
-  }
-
-  offerer.onnegotiationneeded = e =>
+  offerer.onnegotiationneeded = e => {
     offerer.createOffer().then(offer => {
-      console.log("got offer");
+      console.log("got local offer");
       page.offer.value = offer.sdp;
-      offerer.setLocalDescription(offer);
-      answerer.setRemoteDescription(offer);
+      offer_set(offer.sdp);
+      return offerer.setLocalDescription(offer);
     })
-    .then(() => answerer.createAnswer()).then(answer => {
-      console.log("got answer");
-      page.answer.value = answer.sdp;
-      answerer.setLocalDescription(answer);
-      offerer.setRemoteDescription(answer);
+    .then(() => {
+      return answer_is_set;
     })
+    .then((answer) => {
+      console.log("setting percy's SDP answer");
+      return offerer.setRemoteDescription({type: "answer", sdp: answer});
+    })
+    .then(() => {
+      return ice_candidate_is_set;
+    })
+    .then((candidate) => {
+      console.log("adding fake ICE candidates");
+      return offerer.addIceCandidate(new RTCIceCandidate(candidate));
+    })
+    .catch((error) => {
+      console.log(error);
+    })
+  }
 }
 
 window.onload = () => {
