@@ -37,6 +37,9 @@ function run() {
   var offer_set;
   var offer_is_set = new Promise(r => offer_set = r);
 
+  var ice_candidate_set;
+  var ice_candidate_is_set = new Promise(r => ice_candidate_set = r);
+
   socket.addEventListener('open', (e) => {
     offer_is_set.then((offer) => {
       console.log('Sending offer to percy');
@@ -45,9 +48,17 @@ function run() {
   })
 
   socket.addEventListener('message', (e) => {
-    console.log('Message from percy: ', e.data);
-    page.answer.value = e.data;
-    answer_set(e.data);
+    console.log(e.data);
+    message = JSON.parse(e.data);
+    if(message.type === "sdp") {
+      console.log('SDP from percy: ', message.data);
+      page.answer.value = message.data;
+      answer_set(message.data);
+    } else if(message.type === "ice") {
+      console.log("ice-candidates from percy: ", message.data);
+      page.answerICE.value = JSON.stringify(message.data, null, 2) + "\n\n";
+      ice_candidate_set(message.data);
+    }
   })
 
   navigator.mediaDevices.getUserMedia({video: true, audio: false})
@@ -77,10 +88,11 @@ function run() {
       return offerer.setRemoteDescription({type: "answer", sdp: answer});
     })
     .then(() => {
+      return ice_candidate_is_set;
+    })
+    .then((candidate) => {
       console.log("adding fake ICE candidates");
-      let c = {"candidate": "candidate:0 1 UDP 2122121471 " + RELAY_IP + " " + RELAY_PORT + " typ host","sdpMid": "sdparta_0","sdpMLineIndex": 0};
-      page.answerICE.value = JSON.stringify(c, null, 2) + "\n\n";
-      return offerer.addIceCandidate(c);
+      return offerer.addIceCandidate(new RTCIceCandidate(candidate));
     })
     .catch((error) => {
       console.log(error);
