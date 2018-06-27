@@ -130,14 +130,14 @@ func httpServer() *http.Server {
 				s   sdp.Session
 			)
 			if s, err = sdp.DecodeSession(message, s); err != nil {
-				fmt.Println("failed to decode SDP session");
+				fmt.Println("failed to decode SDP session")
 				break
 			}
-			/*
-			for k, v := range s {
-				fmt.Println(k, v)
-			}
-			*/
+
+			// for _, v := range s {
+			// 	fmt.Println(v)
+			// }
+
 			d := sdp.NewDecoder(s)
 			m := new(sdp.Message)
 			if err = d.Decode(m); err != nil {
@@ -146,6 +146,21 @@ func httpServer() *http.Server {
 			}
 			fmt.Println("Offer Origin:", m.Origin)
 
+			// Read the attributes from the session level
+			fingerprint := m.Attributes["fingerprint"][0]
+			fmt.Println("Session.fingerprint: ", fingerprint)
+
+			// Read the attributes from the media section
+			if m.Medias.size() < 1 {
+				fmt.Println("No media section found")
+				break;
+			}
+			ice_pwd := m.Medias[0].Attributes["ice-pwd"][0]
+			ice_ufrag := m.Medias[0].Attributes["ice-ufrag"][0]
+			fmt.Println("Media[0].ice-pwd: ", ice_pwd)
+			fmt.Println("Media[0].ice-ufrag: ", ice_ufrag)
+
+
 			err = c.WriteMessage(mt, sdp_answer)
 			if err != nil {
 				fmt.Println("write:", err)
@@ -153,8 +168,6 @@ func httpServer() *http.Server {
 			}
 
 			ice_candidate_answer := []byte("{\"type\": \"ice\", \"data\":{\"candidate\": \"candidate:0 1 UDP 2122121471 " + hostVal + " " + portVal + " typ host\",\"sdpMid\": \"sdparta_0\",\"sdpMLineIndex\": 0}}");
-
-			// fingerprint, ice-pwd, ice-ufrag, 
 
 			err = c.WriteMessage(mt, ice_candidate_answer)
 			if err != nil {
