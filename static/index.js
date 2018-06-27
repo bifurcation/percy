@@ -28,7 +28,7 @@ function rewrite(c, host, port) {
 
 function run() {
   let offerer = new RTCPeerConnection();
-  
+
   console.log("wtf?");
 
   navigator.mediaDevices.getUserMedia({video: true, audio: false})
@@ -37,7 +37,7 @@ function run() {
       page.local.srcObject = stream;
       offerer.addStream(stream);
     });
-  
+
   offerer.onicecandidate = e => {
     console.log("dropping local ICE candidate: " + JSON.stringify(e.candidate));
     return;
