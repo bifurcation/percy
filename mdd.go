@@ -2,12 +2,13 @@ package percy
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"net"
 	"time"
 )
+
+type AssociationID uint16
 
 type dtlsSRTPPacketClass uint8
 
@@ -45,33 +46,17 @@ type packet struct {
 }
 
 func addrToAssoc(addr *net.UDPAddr) AssociationID {
-	var assoc AssociationID
 	h := sha256.New()
 	h.Write([]byte(addr.String()))
 	sum := h.Sum(nil)
-	copy(assoc[:], sum[:16])
-	return assoc
-}
-
-func assocToString(assoc AssociationID) string {
-	return hex.EncodeToString(assoc[:])
-}
-
-func stringToAssoc(clientID string) (AssociationID, error) {
-	var assoc AssociationID
-	decoded, err := hex.DecodeString(clientID)
-	if err != nil {
-		return AssociationID{}, err
-	}
-	copy(assoc[:], decoded)
-	return assoc, nil
+	return AssociationID((uint16(sum[0]) << 8) + uint16(sum[1]))
 }
 
 type MDD struct {
 	name       string
 	addr       *net.UDPAddr
 	conn       *net.UDPConn
-	clients    map[string]*net.UDPAddr
+	clients    map[AssociationID]*net.UDPAddr
 	stopChan   chan bool
 	doneChan   chan bool
 	packetChan chan packet
@@ -87,7 +72,7 @@ type MDD struct {
 func NewMDD(kmf KMFTunnel) *MDD {
 	mdd := new(MDD)
 	mdd.name = "mdd"
-	mdd.clients = map[string]*net.UDPAddr{}
+	mdd.clients = map[AssociationID]*net.UDPAddr{}
 	mdd.kmf = kmf
 	mdd.timeout = 10 * time.Millisecond
 
@@ -113,11 +98,11 @@ func (mdd *MDD) handleDTLS(assocID AssociationID, msg []byte) {
 	}
 }
 
-func (mdd *MDD) broadcast(clientID string, msg []byte) {
+func (mdd *MDD) broadcast(assocID AssociationID, msg []byte) {
 	// Send the packet out to all the clients except
 	// the one that sent it
 	for client, addr := range mdd.clients {
-		if client == clientID {
+		if client == assocID {
 			continue
 		}
 
@@ -171,13 +156,12 @@ func (mdd *MDD) Listen(port int) error {
 			}
 
 			assocID := addrToAssoc(pkt.addr)
-			clientID := assocToString(assocID)
 
 			// Remember the client if it's new
 			// XXX: Could have an interface to add/remove clients, then
 			//      just filter unknown clients here.
-			if _, ok := mdd.clients[clientID]; !ok {
-				mdd.clients[clientID] = pkt.addr
+			if _, ok := mdd.clients[assocID]; !ok {
+				mdd.clients[assocID] = pkt.addr
 			}
 
 			// XXX: For now, all packets are re-broadcast, which means
@@ -192,8 +176,10 @@ func (mdd *MDD) Listen(port int) error {
 			// offer/answer via the MD, so that it can grab the ICE ufrag
 			// and password and use them to synthesize STUN responses.
 			switch packetClass(pkt.msg) {
-			case packetClassDTLS, packetClassSTUN, packetClassSRTP:
-				mdd.broadcast(clientID, pkt.msg)
+			case packetClassDTLS:
+				mdd.handleDTLS(assocID, pkt.msg)
+			case packetClassSTUN, packetClassSRTP:
+				mdd.broadcast(assocID, pkt.msg)
 			default:
 				log.Printf("Unknown packet type received")
 			}
@@ -203,12 +189,10 @@ func (mdd *MDD) Listen(port int) error {
 	return nil
 }
 
-func (mdd *MDD) Send(assoc AssociationID, msg []byte) error {
-	clientID := assocToString(assoc)
-
-	addr, ok := mdd.clients[clientID]
+func (mdd *MDD) Send(assocID AssociationID, msg []byte) error {
+	addr, ok := mdd.clients[assocID]
 	if !ok {
-		return fmt.Errorf("Unknown client [%s]", clientID)
+		return fmt.Errorf("Unknown client [%04x]", assocID)
 	}
 
 	_, err := mdd.conn.WriteToUDP(msg, addr)
