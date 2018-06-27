@@ -7,8 +7,6 @@ const RELAY_PORT = "RELAY_PORT_FROM_GO_SERVER";
 const IPV6_REGEX = RegExp('\:[0-9a-f]*\:[0-9a-fA-f]*','g');
 const TCP_REGEX = RegExp('.*tcptype.*','g');
 
-const ANSWER_SDP = {type: "answer", sdp: "v=0\r\no=percy0.1 2633292546686233323 0 IN IP4 0.0.0.0\r\ns=-\r\nt=0 0\r\na=fingerprint:sha-256 AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA\r\na=group:BUNDLE sdparta_0\r\na=ice-options:trickle\r\na=msid-semantic:WMS *\r\nm=video 9 UDP/TLS/RTP/SAVPF 120\r\nc=IN IP4 0.0.0.0\r\na=recvonly\r\na=extmap:3 urn:ietf:params:rtp-hdrext:sdes:mid\r\na=extmap:4 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\r\na=extmap:5 urn:ietf:params:rtp-hdrext:toffset\r\na=fmtp:120 max-fs=12288;max-fr=60\r\na=ice-pwd:abcdefabcdefabcdefabcdefabcdefab\r\na=ice-ufrag:fedcbafe\r\na=mid:sdparta_0\r\na=rtcp-fb:120 nack\r\na=rtcp-fb:120 nack pli\r\na=rtcp-fb:120 ccm fir\r\na=rtcp-fb:120 goog-remb\r\na=rtcp-mux\r\na=rtpmap:120 VP8/90000\r\na=setup:passive\r\n"};
-
 // Handy element access
 let page = {
   get run() { return document.getElementById("run"); },
@@ -31,6 +29,27 @@ function run() {
   
   console.log("wtf?");
 
+  const socket = new WebSocket('wss://localhost:' + RELAY_PORT + '/ws');
+
+  var answer_set;
+  var answer_is_set = new Promise(r => answer_set = r);
+
+  var offer_set;
+  var offer_is_set = new Promise(r => offer_set = r);
+
+  socket.addEventListener('open', (e) => {
+    offer_is_set.then((offer) => {
+      console.log('Sending offer to percy');
+      socket.send(offer);
+    })
+  })
+
+  socket.addEventListener('message', (e) => {
+    console.log('Message from percy: ', e.data);
+    page.answer.value = e.data;
+    answer_set(e.data);
+  })
+
   navigator.mediaDevices.getUserMedia({video: true, audio: false})
     .then(stream => {
       console.log("got local stream");
@@ -45,14 +64,17 @@ function run() {
 
   offerer.onnegotiationneeded = e => {
     offerer.createOffer().then(offer => {
-      console.log("got offer");
+      console.log("got local offer");
       page.offer.value = offer.sdp;
+      offer_set(offer.sdp);
       return offerer.setLocalDescription(offer);
     })
     .then(() => {
-      console.log("setting static SDP answer");
-      page.answer.value = ANSWER_SDP.sdp;
-      return offerer.setRemoteDescription(ANSWER_SDP);
+      return answer_is_set;
+    })
+    .then((answer) => {
+      console.log("setting percy's SDP answer");
+      return offerer.setRemoteDescription({type: "answer", sdp: answer});
     })
     .then(() => {
       console.log("adding fake ICE candidates");
