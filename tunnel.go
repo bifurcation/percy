@@ -83,3 +83,8 @@ func (fwd *UDPForwarder) SendWithProfiles(assocID AssociationID, msg []byte, pro
 	// TODO Do something with the profiles
 	return fwd.Send(assocID, msg)
 }
+
+func (fwd *UDPForwarder) SendWithKeys(assocID AssociationID, msg []byte, profile ProtectionProfile, keys SRTPKeys) error {
+	// TODO Do something with the profiles
+	return fwd.mdd.SendWithKeys(assocID, msg, profile, keys)
+}

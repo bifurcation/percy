@@ -6,6 +6,8 @@ import (
 	"log"
 	"net"
 	"time"
+
+	"github.com/fluffy/rtp"
 )
 
 type AssociationID uint16
@@ -53,14 +55,15 @@ func addrToAssoc(addr *net.UDPAddr) AssociationID {
 }
 
 type MDD struct {
-	name       string
-	addr       *net.UDPAddr
-	conn       *net.UDPConn
-	clients    map[AssociationID]*net.UDPAddr
-	stopChan   chan bool
-	doneChan   chan bool
-	packetChan chan packet
-	timeout    time.Duration
+	name        string
+	addr        *net.UDPAddr
+	conn        *net.UDPConn
+	clients     map[AssociationID]*net.UDPAddr
+	rtpSessions map[AssociationID]*rtp.RTPSession
+	stopChan    chan bool
+	doneChan    chan bool
+	packetChan  chan packet
+	timeout     time.Duration
 
 	kmf          KMFTunnel
 	udpForwarder *UDPForwarder
@@ -210,6 +213,8 @@ func (mdd *MDD) Listen(port int) error {
 			//      just filter unknown clients here.
 			if _, ok := mdd.clients[assocID]; !ok {
 				mdd.clients[assocID] = pkt.addr
+				// setup a RTP Session handle
+				mdd.rtpSessions[assocID] = rtp.NewRTPSession()
 			}
 
 			// XXX: For now, all packets are re-broadcast, which means
@@ -256,6 +261,7 @@ func (mdd *MDD) SendWithKeys(assoc AssociationID, msg []byte, profile Protection
 
 	mdd.profile = profile
 	mdd.keys = &keys
+	mdd.rtpSessions[assoc].SetSRTPKey(keys.ClientKey, keys.ClientSalt)
 	return mdd.Send(assoc, msg)
 }
 
