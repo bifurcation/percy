@@ -144,7 +144,7 @@ func (mdd *MDD) processSTUN(addr *net.UDPAddr, msg []byte) {
 				case MSG_BINDING:
 					response.msgType = MSG_TYPE_SUCCESS
 					// 22 to 256 alphanumeric characters
-					response.icePassword = "AAAAAAAAAAAaaaaaaaaaaa"
+					response.icePassword = "abcdefabcdefabcdefabcdefabcdefab"
 					response.AddXorMappedAddress(addr)
 					response.AddMessageIntegrity()
 					response.AddFingerprint()
