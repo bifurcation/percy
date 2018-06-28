@@ -60,6 +60,8 @@ function run() {
     }
   })
 
+  page.offerICE.value = "ICE connection state: " + offerer.iceConnectionState;
+
   navigator.mediaDevices.getUserMedia({video: true, audio: false})
     .then(stream => {
       console.log("got local stream");
@@ -70,6 +72,10 @@ function run() {
   offerer.onicecandidate = e => {
     console.log("dropping local ICE candidate: " + JSON.stringify(e.candidate));
     return;
+  }
+
+  offerer.oniceconnectionstatechange = e => {
+    page.offerICE.value = page.offerICE.value + "\nICE connection state: " + offerer.iceConnectionState;
   }
 
   offerer.onnegotiationneeded = e => {
