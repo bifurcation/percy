@@ -47,7 +47,7 @@ var (
 		"a=rtcp-fb:120 goog-remb\\r\\n" +
 		"a=rtcp-mux\\r\\n" +
 		"a=rtpmap:120 VP8/90000\\r\\n" +
-		"a=setup:passive\"}")
+		"a=setup:passive\\r\\n\"}")
 )
 
 func panicOnError(err error) {
