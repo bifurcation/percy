@@ -16,6 +16,7 @@ func u32intToBytes(val uint32) []byte {
 }
 
 const STUN_COOKIE = 0x2112A442
+const STUN_HEADER_SIZE = 20
 
 type STUNMessageType uint16
 
@@ -277,11 +278,16 @@ func ParseSTUN(msg []byte) (*STUNMessage, error) {
 	request := STUNMessage{}
 
 	used, err := syntax.Unmarshal(msg, &request.header)
-	msg = msg[used:]
 
 	if err != nil || request.header.Cookie != STUN_COOKIE {
 		return &request, err
 	}
+
+	if request.header.Cookie != STUN_COOKIE {
+		return &request, fmt.Errorf("Stun cookie is wrong; received %X, should be %X", request.header.Cookie, STUN_COOKIE)
+	}
+
+	msg = msg[used : request.header.Length+STUN_HEADER_SIZE]
 
 	// Fixup message type
 	request.msgType = MessageType(uint16(request.header.Type) & 0x0110)
@@ -315,8 +321,8 @@ func (msg *STUNMessage) Serialize() ([]byte, error) {
 		case ATTR_MESSAGE_INTEGRITY:
 			// Increase the length by 24 to account for the size of this attribute
 			// (24 bytes: 2 byte tag, 2 byte length, 20 byte value)
-			result[2] = byte((len(result) - 20 + 24) >> 8)
-			result[3] = byte((len(result) - 20 + 24) & 0xFF)
+			result[2] = byte((len(result) - STUN_HEADER_SIZE + 24) >> 8)
+			result[3] = byte((len(result) - STUN_HEADER_SIZE + 24) & 0xFF)
 			mac := hmac.New(sha1.New, []byte(msg.icePassword))
 			mac.Write(result)
 			a.Value = mac.Sum(nil)
@@ -324,15 +330,20 @@ func (msg *STUNMessage) Serialize() ([]byte, error) {
 		case ATTR_FINGERPRINT:
 			// Increase the length by 8 to account for the size of this attribute
 			// (8 bytes: 2 byte tag, 2 byte length, 4 byte value)
-			result[2] = byte((len(result) - 20 + 8) >> 8)
-			result[3] = byte((len(result) - 20 + 8) & 0xFF)
+			result[2] = byte((len(result) - STUN_HEADER_SIZE + 8) >> 8)
+			result[3] = byte((len(result) - STUN_HEADER_SIZE + 8) & 0xFF)
 			IEEETable := crc32.MakeTable(crc32.IEEE)
 			checksum := crc32.Checksum(result, IEEETable)
 			a.Value = u32intToBytes(checksum ^ 0x5354554e)
 			msg.attributes[i] = a
 		}
 
-		attr, _ := syntax.Marshal(&a)
+		attr, err := syntax.Marshal(&a)
+
+		if err != nil {
+			return result, err
+		}
+
 		result = append(result, attr...)
 		// Pad to even 32-bit boundary
 		for len(result)%4 != 0 {
@@ -341,8 +352,8 @@ func (msg *STUNMessage) Serialize() ([]byte, error) {
 	}
 
 	// Fixup stun.header.Length
-	result[2] = byte((len(result) - 20) >> 8)
-	result[3] = byte((len(result) - 20) & 0xFF)
+	result[2] = byte((len(result) - STUN_HEADER_SIZE) >> 8)
+	result[3] = byte((len(result) - STUN_HEADER_SIZE) & 0xFF)
 
 	return result, err
 }
