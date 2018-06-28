@@ -60,18 +60,22 @@ type NoopTunnel bool
 type NoopMDDTunnel bool
 
 func (tun NoopTunnel) Send(assoc percy.AssociationID, msg []byte) error {
+	panic("Missing Send implementation")
 	return nil
 }
 
 func (tun NoopTunnel) SendWithProfiles(assoc percy.AssociationID, msg []byte, profiles []percy.ProtectionProfile) error {
+	panic("Missing SendWithProfiles implementation")
 	return nil
 }
 
 func (mtun NoopMDDTunnel) Send(assoc percy.AssociationID, msg []byte) error {
+	panic("Missing Send implementation")
 	return nil
 }
 
 func (mtun NoopMDDTunnel) SendWithKeys(assocID percy.AssociationID, msg []byte, profile percy.ProtectionProfile, keys percy.SRTPKeys) error {
+	panic("Missing SendWithKeys implementation")
 	return nil
 }
 
