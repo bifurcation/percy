@@ -246,6 +246,7 @@ func (mdd *MDD) Listen(port int) error {
 
 func (mdd *MDD) Send(assocID AssociationID, msg []byte) error {
 	addr, ok := mdd.clients[assocID]
+	log.Printf("Client <-- Mdd for %v[%v]", assocID, addr)
 	if !ok {
 		return fmt.Errorf("Unknown client [%04x]", assocID)
 	}

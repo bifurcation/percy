@@ -53,7 +53,7 @@ func (fwd *UDPForwarder) monitor(assocID AssociationID, conn *net.UDPConn) {
 			log.Printf("Error reading KD socket: %v", err)
 			return
 		}
-
+		log.Printf("Forwarder <-- from AssocId %v with [%d] bytes", assocID, n)
 		buf = buf[:n]
 		err = fwd.mdd.Send(assocID, buf)
 		if err != nil {
