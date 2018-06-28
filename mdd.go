@@ -18,6 +18,7 @@ const (
 	packetClassDTLS dtlsSRTPPacketClass = iota
 	packetClassSRTP
 	packetClassSTUN
+	packetClassHBHKey // Temporary hack until we implement Tunnel
 	packetClassUnknown
 )
 
@@ -37,6 +38,8 @@ func packetClass(msg []byte) dtlsSRTPPacketClass {
 		return packetClassDTLS
 	case B < 2:
 		return packetClassSTUN
+	case B == 0xFF:
+		return packetClassHBHKey
 	default:
 		return packetClassUnknown
 	}
@@ -103,6 +106,10 @@ func (mdd *MDD) handleDTLS(assocID AssociationID, msg []byte) {
 	}
 }
 
+func (mdd *MDD) handleHBHKey(assocID AssociationID, msg []byte) {
+	log.Printf("Received HBH key from KMF: %v", msg)
+}
+
 func (mdd *MDD) broadcast(assocID AssociationID, msg []byte) {
 	// Send the packet out to all the clients except
 	// the one that sent it
@@ -118,14 +125,14 @@ func (mdd *MDD) broadcast(assocID AssociationID, msg []byte) {
 	}
 }
 
-func (mdd *MDD) processSTUN(addr *net.UDPAddr, msg []byte) {
+func (mdd *MDD) handleSTUN(addr *net.UDPAddr, msg []byte) {
 	message, err := ParseSTUN(msg)
 	if err != nil {
 		log.Println("Error parsing STUN message", err, msg)
 		return
 	}
 
-	log.Println(addr, message)
+	log.Println(addr, message.header)
 
 	switch message.msgType {
 	case MSG_TYPE_REQUEST:
@@ -149,7 +156,7 @@ func (mdd *MDD) processSTUN(addr *net.UDPAddr, msg []byte) {
 			log.Println("Error serializing response:", err)
 			return
 		}
-		log.Println("Sending", response)
+		log.Println("Sending", response.header)
 
 		_, err = mdd.conn.WriteToUDP(responseBytes, addr)
 		if err != nil {
@@ -234,7 +241,9 @@ func (mdd *MDD) Listen(port int) error {
 			case packetClassSRTP:
 				mdd.broadcast(assocID, pkt.msg)
 			case packetClassSTUN:
-				mdd.processSTUN(pkt.addr, pkt.msg)
+				mdd.handleSTUN(pkt.addr, pkt.msg)
+			case packetClassHBHKey:
+				mdd.handleHBHKey(assocID, pkt.msg)
 			default:
 				log.Printf("Unknown packet type received")
 			}

@@ -226,7 +226,7 @@ func main() {
 	}
 	// XXX Yeah, I don't know why NewMDD has two parameters. Ask Richard? [abr]
 	mdd := percy.NewMDD(forwarder, forwarder)
-	err = mdd.Listen(4430)
+	err = mdd.Listen(port)
 	panicOnError(err)
 
 	srv := httpServer()
