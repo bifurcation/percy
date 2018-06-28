@@ -123,39 +123,39 @@ func (mdd *MDD) processSTUN(addr *net.UDPAddr, msg []byte) {
 	log.Println(addr, message)
 
 	switch message.msgType {
-		case MSG_TYPE_REQUEST:
-			response := STUNMessage{header: message.header }
-			switch message.header.Type {
-				case MSG_BINDING:
-					response.msgType = MSG_TYPE_SUCCESS
-					// 22 to 256 alphanumeric characters
-					response.icePassword = "abcdefabcdefabcdefabcdefabcdefab"
-					response.AddXorMappedAddress(addr)
-					response.AddMessageIntegrity()
-					response.AddFingerprint()
-				default:
-					log.Printf("Unhandled STUN message type: %v", message)
-					response.msgType = MSG_TYPE_ERROR
-					response.AddErrorCode(500, "Unimplemented")
-			}
+	case MSG_TYPE_REQUEST:
+		response := STUNMessage{header: message.header}
+		switch message.header.Type {
+		case MSG_BINDING:
+			response.msgType = MSG_TYPE_SUCCESS
+			// 22 to 256 alphanumeric characters
+			response.icePassword = "abcdefabcdefabcdefabcdefabcdefab"
+			response.AddXorMappedAddress(addr)
+			response.AddMessageIntegrity()
+			response.AddFingerprint()
+		default:
+			log.Printf("Unhandled STUN message type: %v", message)
+			response.msgType = MSG_TYPE_ERROR
+			response.AddErrorCode(500, "Unimplemented")
+		}
 
-			responseBytes, err := response.Serialize()
-			if err != nil {
-				log.Println("Error serializing response:",err)
-				return
-			}
-			log.Println("Sending", response)
+		responseBytes, err := response.Serialize()
+		if err != nil {
+			log.Println("Error serializing response:", err)
+			return
+		}
+		log.Println("Sending", response)
 
-			_, err = mdd.conn.WriteToUDP(responseBytes, addr)
-			if err != nil {
-				log.Println("Error replying to STUN request:",err)
-			}
-		case MSG_TYPE_INDICATION:
-			// TODO: handle received indications
-		case MSG_TYPE_SUCCESS:
-			// TODO: handle received responses
-		case MSG_TYPE_ERROR:
-			// TODO: handle received errors
+		_, err = mdd.conn.WriteToUDP(responseBytes, addr)
+		if err != nil {
+			log.Println("Error replying to STUN request:", err)
+		}
+	case MSG_TYPE_INDICATION:
+		// TODO: handle received indications
+	case MSG_TYPE_SUCCESS:
+		// TODO: handle received responses
+	case MSG_TYPE_ERROR:
+		// TODO: handle received errors
 	}
 }
 
