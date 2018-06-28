@@ -113,6 +113,52 @@ func (mdd *MDD) broadcast(assocID AssociationID, msg []byte) {
 	}
 }
 
+func (mdd *MDD) processSTUN(addr *net.UDPAddr, msg []byte) {
+	message, err := ParseSTUN(msg)
+	if err != nil {
+		log.Println("Error parsing STUN message", err, msg)
+		return
+	}
+
+	log.Println(addr, message)
+
+	switch message.msgType {
+		case MSG_TYPE_REQUEST:
+			response := STUNMessage{header: message.header }
+			switch message.header.Type {
+				case MSG_BINDING:
+					response.msgType = MSG_TYPE_SUCCESS
+					// 22 to 256 alphanumeric characters
+					response.icePassword = "abcdefabcdefabcdefabcdefabcdefab"
+					response.AddXorMappedAddress(addr)
+					response.AddMessageIntegrity()
+					response.AddFingerprint()
+				default:
+					log.Printf("Unhandled STUN message type: %v", message)
+					response.msgType = MSG_TYPE_ERROR
+					response.AddErrorCode(500, "Unimplemented")
+			}
+
+			responseBytes, err := response.Serialize()
+			if err != nil {
+				log.Println("Error serializing response:",err)
+				return
+			}
+			log.Println("Sending", response)
+
+			_, err = mdd.conn.WriteToUDP(responseBytes, addr)
+			if err != nil {
+				log.Println("Error replying to STUN request:",err)
+			}
+		case MSG_TYPE_INDICATION:
+			// TODO: handle received indications
+		case MSG_TYPE_SUCCESS:
+			// TODO: handle received responses
+		case MSG_TYPE_ERROR:
+			// TODO: handle received errors
+	}
+}
+
 func (mdd *MDD) Listen(port int) error {
 	var err error
 
@@ -178,8 +224,10 @@ func (mdd *MDD) Listen(port int) error {
 			switch packetClass(pkt.msg) {
 			case packetClassDTLS:
 				mdd.handleDTLS(assocID, pkt.msg)
-			case packetClassSTUN, packetClassSRTP:
+			case packetClassSRTP:
 				mdd.broadcast(assocID, pkt.msg)
+			case packetClassSTUN:
+				mdd.processSTUN(pkt.addr, pkt.msg)
 			default:
 				log.Printf("Unknown packet type received")
 			}
