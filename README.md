@@ -12,12 +12,6 @@ Right now, we have the following components available:
   * DTLS packets should be forwarded between the client and the KD
   * SRTP packets should be broadcast to conference participants
 
-* A CGo wrapper around [OpenSSL](https://github.com/openssl/openssl)
-  that provides DTLS negotiation.
-
-* A CGo wrapper around [libsrtp](https://github.com/cisco/libstrp)
-  that provides SRTP encryption / decryption.
-
 * A small WebRTC app that demonstrates one-to-one media between two
   peers, relayed via this server.
 
@@ -28,9 +22,6 @@ treatment to different packet classes.)
 
 In order to get conferencing working (even without PERC), we would
 need:
-
-* STUN termination, which requires reading the SDP offer sent by a
-  connecting endpoint toget the ICE `ufrag` and `pwd` attributes
 
 * DTLS termination, which requires synthesizing the SDP answer for
   the conference to set the `setup` and `fingerprint` attributes.
@@ -45,12 +36,11 @@ when in fact AES-GCM-double was negotiated.
 ## Quickstart
 
 ```
-# Fetch and build C dependencies
-> git submodule update --init
-> cd third-party/openssl && ./config -static && make && cd ../..
-> cd third-party/libsrtp && ./configure && make && cd ../..
+# Fetch percy through go
+> go get github.com/bifurcation/percy
 
 # Build and run self-tests
+> cd ~/go/src/github.com/bifurcation/percy
 > go build ./...
 > go test ./...
 
@@ -59,6 +49,5 @@ when in fact AES-GCM-double was negotiated.
 # Open in Firefox: https://localhost:4430/
 # Click through certificate warning
 # Click "Run"
-# If you get two videos, it worked
 ```
 
