@@ -151,7 +151,7 @@ func httpServer() *http.Server {
 			fmt.Println("Session.fingerprint: ", fingerprint)
 
 			// Read the attributes from the media section
-			if m.Medias.size() < 1 {
+			if len(m.Medias) < 1 {
 				fmt.Println("No media section found")
 				break;
 			}
