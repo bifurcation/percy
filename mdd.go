@@ -228,7 +228,6 @@ func (mdd *MDD) Listen(port int) error {
 			// XXX: Handling STUN locally will require routing SDP
 			// offer/answer via the MD, so that it can grab the ICE ufrag
 			// and password and use them to synthesize STUN responses.
-			log.Printf("Received Packet of class %v", packetClass(pkt.msg))
 			switch packetClass(pkt.msg) {
 			case packetClassDTLS:
 				mdd.handleDTLS(assocID, pkt.msg)

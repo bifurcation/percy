@@ -219,13 +219,13 @@ func httpServer() *http.Server {
 //////////
 
 func main() {
-	kmfTunnel := NoopTunnel(false)
 	mddTunnel := NoopMDDTunnel(false)
 	forwarder, err := percy.NewUDPForwarder(mddTunnel, kdServer)
 	if err != nil {
 		panic("Error creating forwarder")
 	}
-	mdd := percy.NewMDD(kmfTunnel, forwarder)
+	// XXX Yeah, I don't know why NewMDD has two parameters. Ask Richard? [abr]
+	mdd := percy.NewMDD(forwarder, forwarder)
 	err = mdd.Listen(4430)
 	panicOnError(err)
 
