@@ -2,7 +2,6 @@
 
 let gUMConfig = { "audio": false, "video": true };
 const IP_PORT_REGEX = /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+\d+/;
-const RELAY_IP = "RELAY_IP_FROM_GO_SERVER";
 const RELAY_PORT = "RELAY_PORT_FROM_GO_SERVER";
 const IPV6_REGEX = RegExp('\:[0-9a-f]*\:[0-9a-fA-f]*','g');
 const TCP_REGEX = RegExp('.*tcptype.*','g');

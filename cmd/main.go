@@ -92,11 +92,9 @@ func httpServer() *http.Server {
 
 	js := string(jsData)
 
-	// TODO Substitute in address/port in JS
 	hostVal := localIP()
 	portVal := fmt.Sprintf("%d", port)
 
-	js = strings.Replace(js, hostField, hostVal, -1)
 	js = strings.Replace(js, portField, portVal, -1)
 
 	// Start up a web server
@@ -125,7 +123,7 @@ func httpServer() *http.Server {
 				fmt.Println("read:", err)
 				break
 			}
-			fmt.Println("recv message")
+			fmt.Println("received SDP offer")
 			var (
 				s   sdp.Session
 			)
@@ -144,14 +142,15 @@ func httpServer() *http.Server {
 				fmt.Println("failed to decode")
 				break
 			}
-			fmt.Println("Offer Origin:", m.Origin)
+			//fmt.Println("Offer Origin:", m.Origin)
 
 			// Read the attributes from the session level
-			fingerprint := m.Attributes["fingerprint"][0]
+			fingerprint_hash := m.Attributes["fingerprint"][0]
+			fingerprint := strings.Split(fingerprint_hash, " ")[1]
 			fmt.Println("Session.fingerprint: ", fingerprint)
 
 			// Read the attributes from the media section
-			if m.Medias.size() < 1 {
+			if len(m.Medias) < 1 {
 				fmt.Println("No media section found")
 				break;
 			}
