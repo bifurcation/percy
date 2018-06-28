@@ -20,9 +20,8 @@ var (
 	certFilename = "../static/cert.pem"
 	htmlFilename = "../static/index.html"
 	jsFilename   = "../static/index.js"
-	hostField    = "RELAY_IP_FROM_GO_SERVER"
 	portField    = "RELAY_PORT_FROM_GO_SERVER"
-	sdp_answer   = []byte("{\"type\": \"sdp\", \"data\":\"v=0\\r\\no=percy0.2 2633292546686233323 0 IN IP4 0.0.0.0\\r\\ns=-\\r\\nt=0 0\\r\\na=fingerprint:sha-256 AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA\\r\\na=group:BUNDLE sdparta_0\\r\\na=ice-options:trickle\\r\\na=msid-semantic:WMS *\\r\\nm=video 9 UDP/TLS/RTP/SAVPF 120\\r\\nc=IN IP4 0.0.0.0\\r\\na=recvonly\\r\\na=extmap:3 urn:ietf:params:rtp-hdrext:sdes:mid\\r\\na=extmap:4 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\\r\\na=extmap:5 urn:ietf:params:rtp-hdrext:toffset\\r\\na=fmtp:120 max-fs=12288;max-fr=60\\r\\na=ice-pwd:abcdefabcdefabcdefabcdefabcdefab\\r\\na=ice-ufrag:fedcbafe\\r\\na=mid:sdparta_0\\r\\na=rtcp-fb:120 nack\\r\\na=rtcp-fb:120 nack pli\\r\\na=rtcp-fb:120 ccm fir\\r\\na=rtcp-fb:120 goog-remb\\r\\na=rtcp-mux\\r\\na=rtpmap:120 VP8/90000\\r\\na=setup:passive\"}")
+	sdp_answer   = []byte("{\"type\": \"sdp\", \"data\":\"v=0\\r\\no=percy0.2 2633292546686233323 0 IN IP4 0.0.0.0\\r\\ns=-\\r\\nt=0 0\\r\\na=fingerprint:sha-256 E2:77:B0:C9:B3:4C:1D:B8:E1:36:42:61:35:A5:61:16:5E:D0:FB:6E:9D:11:11:13:AC:98:42:CF:8E:12:A3:E5\\r\\na=group:BUNDLE sdparta_0\\r\\na=ice-options:trickle\\r\\na=msid-semantic:WMS *\\r\\nm=video 9 UDP/TLS/RTP/SAVPF 120\\r\\nc=IN IP4 0.0.0.0\\r\\na=recvonly\\r\\na=extmap:3 urn:ietf:params:rtp-hdrext:sdes:mid\\r\\na=extmap:4 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\\r\\na=extmap:5 urn:ietf:params:rtp-hdrext:toffset\\r\\na=fmtp:120 max-fs=12288;max-fr=60\\r\\na=ice-pwd:abcdefabcdefabcdefabcdefabcdefab\\r\\na=ice-ufrag:fedcbafe\\r\\na=mid:sdparta_0\\r\\na=rtcp-fb:120 nack\\r\\na=rtcp-fb:120 nack pli\\r\\na=rtcp-fb:120 ccm fir\\r\\na=rtcp-fb:120 goog-remb\\r\\na=rtcp-mux\\r\\na=rtpmap:120 VP8/90000\\r\\na=setup:passive\"}")
 )
 
 func panicOnError(err error) {
