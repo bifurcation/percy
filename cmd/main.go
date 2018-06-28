@@ -26,7 +26,7 @@ var (
 		"o=percy0.2 2633292546686233323 0 IN IP4 0.0.0.0\\r\\n" +
 		"s=-\\r\\n" +
 		"t=0 0\\r\\n" +
-		"a=fingerprint:sha-256 E2:77:B0:C9:B3:4C:1D:B8:E1:36:42:61:35:A5:61:16:5E:D0:FB:6E:9D:11:11:13:AC:98:42:CF:8E:12:A3:E5\\r\\n" +
+		"a=fingerprint:sha-256 4E:53:20:94:6D:C6:7E:58:7C:8E:F1:08:2A:38:74:59:BF:73:48:56:AB:4D:3F:48:F1:B4:9F:B4:AF:2E:76:75\\r\\n" +
 		"a=group:BUNDLE sdparta_0\\r\\n" +
 		"a=ice-options:trickle\\r\\n" +
 		"a=ice-lite\\r\\n" +
