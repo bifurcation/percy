@@ -33,7 +33,7 @@ var (
 		"a=msid-semantic:WMS *\\r\\n" +
 		"m=video 9 UDP/TLS/RTP/SAVPF 120\\r\\n" +
 		"c=IN IP4 0.0.0.0\\r\\n" +
-		"a=recvonly\\r\\n" +
+		"a=sendrecv\\r\\n" +
 		"a=extmap:3 urn:ietf:params:rtp-hdrext:sdes:mid\\r\\n" +
 		"a=extmap:4 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\\r\\n" +
 		"a=extmap:5 urn:ietf:params:rtp-hdrext:toffset\\r\\n" +
