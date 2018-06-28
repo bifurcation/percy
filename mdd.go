@@ -77,6 +77,7 @@ func NewMDD(kmf KMFTunnel, forwarder *UDPForwarder) *MDD {
 	mdd := new(MDD)
 	mdd.name = "mdd"
 	mdd.clients = map[AssociationID]*net.UDPAddr{}
+	mdd.rtpSessions = map[AssociationID]*rtp.RTPSession{}
 	mdd.kmf = kmf
 	mdd.udpForwarder = forwarder
 	mdd.timeout = 10 * time.Millisecond
