@@ -6,11 +6,11 @@ import (
 	"testing"
 )
 
-type EchoServer struct {
+type KdEchoServer struct {
 	stopChan chan bool
 }
 
-func NewEchoServer(port int) (*EchoServer, error) {
+func NewKdEchoServer(port int) (*KdEchoServer, error) {
 	addr := &net.UDPAddr{Port: port}
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
@@ -50,10 +50,10 @@ func NewEchoServer(port int) (*EchoServer, error) {
 		}
 	}()
 
-	return &EchoServer{stopChan: stopChan}, nil
+	return &KdEchoServer{stopChan: stopChan}, nil
 }
 
-func (echo *EchoServer) Stop() {
+func (echo *KdEchoServer) Stop() {
 	echo.stopChan <- true
 }
 
@@ -79,9 +79,9 @@ func TestUDPForwarder(t *testing.T) {
 	server := "localhost:2000"
 
 	mdd := make(MDDChan)
-	echo, err := NewEchoServer(port)
+	echo, err := NewKdEchoServer(port)
 	if err != nil {
-		t.Fatalf("Error creating echo server: %v", err)
+		t.Fatalf("Error creating kd echo server: %v", err)
 	}
 
 	fwd, err := NewUDPForwarder(mdd, server)
