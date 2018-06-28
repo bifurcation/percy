@@ -62,18 +62,20 @@ type MDD struct {
 	packetChan chan packet
 	timeout    time.Duration
 
-	kmf      KMFTunnel
-	keys     *SRTPKeys
-	profile  ProtectionProfile
-	profiles []ProtectionProfile
+	kmf          KMFTunnel
+	udpForwarder *UDPForwarder
+	keys         *SRTPKeys
+	profile      ProtectionProfile
+	profiles     []ProtectionProfile
 	// TODO add some mutexes
 }
 
-func NewMDD(kmf KMFTunnel) *MDD {
+func NewMDD(kmf KMFTunnel, forwarder *UDPForwarder) *MDD {
 	mdd := new(MDD)
 	mdd.name = "mdd"
 	mdd.clients = map[AssociationID]*net.UDPAddr{}
 	mdd.kmf = kmf
+	mdd.udpForwarder = forwarder
 	mdd.timeout = 10 * time.Millisecond
 
 	mdd.stopChan = make(chan bool)

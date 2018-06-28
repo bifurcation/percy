@@ -9,9 +9,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gortc/sdp"
-	"github.com/gorilla/websocket"
 	"github.com/bifurcation/percy"
+	"github.com/gorilla/websocket"
+	"github.com/gortc/sdp"
 )
 
 var (
@@ -21,6 +21,7 @@ var (
 	htmlFilename = "../static/index.html"
 	jsFilename   = "../static/index.js"
 	portField    = "RELAY_PORT_FROM_GO_SERVER"
+	kdServer     = "localhost:2000"
 	sdp_answer   = []byte("{\"type\": \"sdp\", \"data\":\"v=0\\r\\n" +
 		"o=percy0.2 2633292546686233323 0 IN IP4 0.0.0.0\\r\\n" +
 		"s=-\\r\\n" +
@@ -56,12 +57,21 @@ func panicOnError(err error) {
 }
 
 type NoopTunnel bool
+type NoopMDDTunnel bool
 
 func (tun NoopTunnel) Send(assoc percy.AssociationID, msg []byte) error {
 	return nil
 }
 
 func (tun NoopTunnel) SendWithProfiles(assoc percy.AssociationID, msg []byte, profiles []percy.ProtectionProfile) error {
+	return nil
+}
+
+func (mtun NoopMDDTunnel) Send(assoc percy.AssociationID, msg []byte) error {
+	return nil
+}
+
+func (mtun NoopMDDTunnel) SendWithKeys(assocID percy.AssociationID, msg []byte, profile percy.ProtectionProfile, keys percy.SRTPKeys) error {
 	return nil
 }
 
@@ -149,7 +159,7 @@ func httpServer() *http.Server {
 			}
 			fmt.Println("received SDP offer")
 			var (
-				s   sdp.Session
+				s sdp.Session
 			)
 			if s, err = sdp.DecodeSession(message, s); err != nil {
 				fmt.Println("failed to decode SDP session")
@@ -176,13 +186,12 @@ func httpServer() *http.Server {
 			// Read the attributes from the media section
 			if len(m.Medias) < 1 {
 				fmt.Println("No media section found")
-				break;
+				break
 			}
 			ice_pwd := m.Medias[0].Attributes["ice-pwd"][0]
 			ice_ufrag := m.Medias[0].Attributes["ice-ufrag"][0]
 			fmt.Println("Media[0].ice-pwd: ", ice_pwd)
 			fmt.Println("Media[0].ice-ufrag: ", ice_ufrag)
-
 
 			err = c.WriteMessage(mt, sdp_answer)
 			if err != nil {
@@ -190,7 +199,7 @@ func httpServer() *http.Server {
 				break
 			}
 
-			ice_candidate_answer := []byte("{\"type\": \"ice\", \"data\":{\"candidate\": \"candidate:0 1 UDP 2122121471 " + hostVal + " " + portVal + " typ host\",\"sdpMid\": \"sdparta_0\",\"sdpMLineIndex\": 0}}");
+			ice_candidate_answer := []byte("{\"type\": \"ice\", \"data\":{\"candidate\": \"candidate:0 1 UDP 2122121471 " + hostVal + " " + portVal + " typ host\",\"sdpMid\": \"sdparta_0\",\"sdpMLineIndex\": 0}}")
 
 			err = c.WriteMessage(mt, ice_candidate_answer)
 			if err != nil {
@@ -210,9 +219,14 @@ func httpServer() *http.Server {
 //////////
 
 func main() {
-	tunnel := NoopTunnel(false)
-	mdd := percy.NewMDD(tunnel)
-	err := mdd.Listen(4430)
+	kmfTunnel := NoopTunnel(false)
+	mddTunnel := NoopMDDTunnel(false)
+	forwarder, err := percy.NewUDPForwarder(mddTunnel, kdServer)
+	if err != nil {
+		panic("Error creating forwarder")
+	}
+	mdd := percy.NewMDD(kmfTunnel, forwarder)
+	err = mdd.Listen(4430)
 	panicOnError(err)
 
 	srv := httpServer()
