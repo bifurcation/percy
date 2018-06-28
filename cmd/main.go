@@ -21,7 +21,7 @@ var (
 	htmlFilename = "../static/index.html"
 	jsFilename   = "../static/index.js"
 	portField    = "RELAY_PORT_FROM_GO_SERVER"
-	kdServer     = "localhost:2000"
+	kdServer     = "localhost:4433"
 	sdp_answer   = []byte("{\"type\": \"sdp\", \"data\":\"v=0\\r\\n" +
 		"o=percy0.2 2633292546686233323 0 IN IP4 0.0.0.0\\r\\n" +
 		"s=-\\r\\n" +

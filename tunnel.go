@@ -63,6 +63,7 @@ func (fwd *UDPForwarder) monitor(assocID AssociationID, conn *net.UDPConn) {
 }
 
 func (fwd *UDPForwarder) Send(assocID AssociationID, msg []byte) error {
+	log.Printf("Sending to KMF: %v", msg)
 	var err error
 	conn, ok := fwd.conns[assocID]
 	if !ok {

@@ -92,7 +92,6 @@ func NewMDD(kmf KMFTunnel, forwarder *UDPForwarder) *MDD {
 	return mdd
 }
 
-// XXX: Dead method until we route DTLS packets more intelligently
 func (mdd *MDD) handleDTLS(assocID AssociationID, msg []byte) {
 	// Rough check for ClientHello
 	ch := len(msg) >= 14 && msg[0] == 0x16 && msg[13] == 0x01
@@ -229,6 +228,7 @@ func (mdd *MDD) Listen(port int) error {
 			// XXX: Handling STUN locally will require routing SDP
 			// offer/answer via the MD, so that it can grab the ICE ufrag
 			// and password and use them to synthesize STUN responses.
+			log.Printf("Received Packet of class %v", packetClass(pkt.msg))
 			switch packetClass(pkt.msg) {
 			case packetClassDTLS:
 				mdd.handleDTLS(assocID, pkt.msg)
