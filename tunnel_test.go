@@ -78,16 +78,18 @@ func TestUDPForwarder(t *testing.T) {
 	port := 2000
 	server := "localhost:2000"
 
-	mdd := make(MDDChan)
+	md := make(MDDChan)
 	echo, err := NewKdEchoServer(port)
 	if err != nil {
 		t.Fatalf("Error creating kd echo server: %v", err)
 	}
 
-	fwd, err := NewUDPForwarder(mdd, server)
+	fwd, err := NewUDPForwarder(server)
 	if err != nil {
 		t.Fatalf("Error creating echo server: %v", err)
 	}
+
+	fwd.MD = md
 
 	var assoc1 AssociationID = 1
 	var assoc2 AssociationID = 2
@@ -97,7 +99,7 @@ func TestUDPForwarder(t *testing.T) {
 	assocSequence := []AssociationID{assoc1, assoc1, assoc2, assoc2, assoc1, assoc2, assoc1}
 	for _, assocID := range assocSequence {
 		fwd.Send(assocID, msgIn)
-		pkt := <-mdd
+		pkt := <-md
 
 		if pkt.assocID != assocID {
 			t.Fatalf("Incorrect association ID: %04x != %04x", pkt.assocID, assocID)
