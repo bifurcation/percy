@@ -27,6 +27,10 @@ type MDDTunnel interface {
 
 //////////
 
+const (
+	kdBufferSize = 2048
+)
+
 type UDPForwarder struct {
 	MD     MDDTunnel
 	server *net.UDPAddr
@@ -62,6 +66,8 @@ func (fwd *UDPForwarder) monitor(assocID AssociationID, conn *net.UDPConn) {
 		if err != nil {
 			log.Printf("Error forwarding DTLS packet: %v", err)
 		}
+
+		buf = buf[:kdBufferSize]
 	}
 }
 
@@ -73,6 +79,8 @@ func (fwd *UDPForwarder) Send(assocID AssociationID, msg []byte) error {
 		if err != nil {
 			return err
 		}
+
+		conn.SetReadBuffer(kdBufferSize)
 
 		fwd.conns[assocID] = conn
 		go fwd.monitor(assocID, conn)
