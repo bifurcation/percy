@@ -68,11 +68,10 @@ type MDD struct {
 	packetChan  chan packet
 	timeout     time.Duration
 
-	KD           KMFTunnel
-	udpForwarder *UDPForwarder
-	keys         *SRTPKeys
-	profile      ProtectionProfile
-	profiles     []ProtectionProfile
+	KD       KMFTunnel
+	keys     *SRTPKeys
+	profile  ProtectionProfile
+	profiles []ProtectionProfile
 	// TODO add some mutexes
 }
 
@@ -213,6 +212,8 @@ func (mdd *MDD) Listen(port int) error {
 
 			assocID := addrToAssoc(pkt.addr)
 
+			log.Printf("Client --> MD for %v[%v] with [%d] bytes", assocID, pkt.addr, len(pkt.msg))
+
 			// Remember the client if it's new
 			// XXX: Could have an interface to add/remove clients, then
 			//      just filter unknown clients here.
@@ -253,7 +254,7 @@ func (mdd *MDD) Listen(port int) error {
 
 func (mdd *MDD) Send(assocID AssociationID, msg []byte) error {
 	addr, ok := mdd.clients[assocID]
-	log.Printf("Client <-- Mdd for %v[%v]", assocID, addr)
+	log.Printf("Client <-- MD for %v[%v] with [%d] bytes", assocID, addr, len(msg))
 	if !ok {
 		return fmt.Errorf("Unknown client [%04x]", assocID)
 	}

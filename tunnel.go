@@ -25,6 +25,8 @@ type MDDTunnel interface {
 	SendWithKeys(assocID AssociationID, msg []byte, profile ProtectionProfile, keys SRTPKeys) error
 }
 
+//////////
+
 type UDPForwarder struct {
 	MD     MDDTunnel
 	server *net.UDPAddr
@@ -44,7 +46,7 @@ func NewUDPForwarder(server string) (*UDPForwarder, error) {
 }
 
 func (fwd *UDPForwarder) monitor(assocID AssociationID, conn *net.UDPConn) {
-	buf := make([]byte, 2048)
+	buf := make([]byte, kdBufferSize)
 
 	for {
 		n, _, err := conn.ReadFromUDP(buf)
@@ -52,8 +54,10 @@ func (fwd *UDPForwarder) monitor(assocID AssociationID, conn *net.UDPConn) {
 			log.Printf("Error reading KD socket: %v", err)
 			return
 		}
-		log.Printf("Forwarder <-- from AssocId %v with [%d] bytes", assocID, n)
 		buf = buf[:n]
+
+		log.Printf("MD <-- KD for %v with [%d] bytes", assocID, len(buf))
+
 		err = fwd.MD.Send(assocID, buf)
 		if err != nil {
 			log.Printf("Error forwarding DTLS packet: %v", err)
@@ -74,6 +78,8 @@ func (fwd *UDPForwarder) Send(assocID AssociationID, msg []byte) error {
 		go fwd.monitor(assocID, conn)
 	}
 
+	log.Printf("MD --> KD for %v with [%d] bytes", assocID, len(msg))
+
 	_, err = conn.Write(msg)
 	return err
 }
@@ -81,9 +87,4 @@ func (fwd *UDPForwarder) Send(assocID AssociationID, msg []byte) error {
 func (fwd *UDPForwarder) SendWithProfiles(assocID AssociationID, msg []byte, profiles []ProtectionProfile) error {
 	// TODO Do something with the profiles
 	return fwd.Send(assocID, msg)
-}
-
-func (fwd *UDPForwarder) SendWithKeys(assocID AssociationID, msg []byte, profile ProtectionProfile, keys SRTPKeys) error {
-	// TODO Do something with the profiles
-	return fwd.MD.SendWithKeys(assocID, msg, profile, keys)
 }
