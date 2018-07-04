@@ -78,6 +78,11 @@ function run() {
     page.offerICE.value = page.offerICE.value + "\nICE connection state: " + offerer.iceConnectionState;
   }
 
+  offerer.ontrack = e => {
+    console.log("got remote track");
+    page.remote.srcObject = e.streams[0];
+  }
+
   offerer.onnegotiationneeded = e => {
     offerer.createOffer().then(offer => {
       console.log("got local offer");
