@@ -18,7 +18,7 @@ const (
 	packetClassDTLS dtlsSRTPPacketClass = iota
 	packetClassSRTP
 	packetClassSTUN
-	packetClassHBHKey // Temporary hack until we implement Tunnel
+	packetClassHBHKey
 	packetClassUnknown
 )
 
@@ -69,7 +69,7 @@ type MDD struct {
 	timeout     time.Duration
 
 	KD       KMFTunnel
-	keys     *SRTPKeys
+	keys     map[AssociationID]HBHKeys
 	profile  ProtectionProfile
 	profiles []ProtectionProfile
 	// TODO add some mutexes
@@ -88,19 +88,14 @@ func NewMDD() *MDD {
 
 	// TODO Add some defaults
 	mdd.profiles = []ProtectionProfile{}
+	mdd.keys = map[AssociationID]HBHKeys{}
 
 	return mdd
 }
 
 func (mdd *MDD) handleDTLS(assocID AssociationID, msg []byte) {
-	// Rough check for ClientHello
-	ch := len(msg) >= 14 && msg[0] == 0x16 && msg[13] == 0x01
-
-	if ch {
-		mdd.KD.SendWithProfiles(assocID, msg, mdd.profiles)
-	} else {
-		mdd.KD.Send(assocID, msg)
-	}
+	// TODO Notify the KD of supported SRTP profiles
+	mdd.KD.Send(assocID, msg)
 }
 
 func (mdd *MDD) handleHBHKey(assocID AssociationID, msg []byte) {
@@ -114,6 +109,8 @@ func (mdd *MDD) broadcast(assocID AssociationID, msg []byte) {
 		if client == assocID {
 			continue
 		}
+
+		log.Printf("Client <-- MD for %v[%v] with [%d] bytes", client, addr, len(msg))
 
 		_, err := mdd.conn.WriteToUDP(msg, addr)
 		if err != nil {
@@ -263,15 +260,10 @@ func (mdd *MDD) Send(assocID AssociationID, msg []byte) error {
 	return err
 }
 
-func (mdd *MDD) SendWithKeys(assoc AssociationID, msg []byte, profile ProtectionProfile, keys SRTPKeys) error {
-	if packetClass(msg) != packetClassDTLS {
-		return fmt.Errorf("Send called with non-DTLS packet")
-	}
-
-	mdd.profile = profile
-	mdd.keys = &keys
-	mdd.rtpSessions[assoc].SetSRTPKey(keys.ClientKey, keys.ClientSalt)
-	return mdd.Send(assoc, msg)
+func (mdd *MDD) SetKeys(assocID AssociationID, keys HBHKeys) error {
+	log.Printf("       --- MD setting keys for %v", assocID)
+	mdd.keys[assocID] = keys
+	return nil
 }
 
 func (mdd *MDD) Stop() {

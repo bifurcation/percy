@@ -44,7 +44,7 @@ func NewKdEchoServer(port int) (*KdEchoServer, error) {
 				conn.Close()
 				return
 			case pkt = <-packetChan:
-				pkt.msg = append(pkt.msg, []byte("-ack")...)
+				pkt.msg = append(pkt.msg, 0x01)
 				conn.WriteToUDP(pkt.msg, pkt.addr)
 			}
 		}
@@ -69,8 +69,7 @@ func (mdd MDDChan) Send(assocID AssociationID, msg []byte) error {
 	return nil
 }
 
-func (mdd MDDChan) SendWithKeys(assocID AssociationID, msg []byte, profile ProtectionProfile, keys SRTPKeys) error {
-	mdd <- assocPacket{assocID, msg}
+func (mdd MDDChan) SetKeys(assocID AssociationID, keys HBHKeys) error {
 	return nil
 }
 
@@ -93,8 +92,8 @@ func TestUDPForwarder(t *testing.T) {
 
 	var assoc1 AssociationID = 1
 	var assoc2 AssociationID = 2
-	msgIn := []byte("hello")
-	msgOut := []byte("hello-ack")
+	msgIn := []byte{0x14, 0x00}
+	msgOut := []byte{0x14, 0x00, 0x01}
 
 	assocSequence := []AssociationID{assoc1, assoc1, assoc2, assoc2, assoc1, assoc2, assoc1}
 	for _, assocID := range assocSequence {
