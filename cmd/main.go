@@ -23,14 +23,26 @@ var (
 	portField    = "RELAY_PORT_FROM_GO_SERVER"
 	kdServer     = "localhost:4433"
 	sdp_answer   = []byte("{\"type\": \"sdp\", \"data\":\"v=0\\r\\n" +
-		"o=percy0.2 2633292546686233323 0 IN IP4 0.0.0.0\\r\\n" +
+		"o=percy0.3 2633292546686233323 0 IN IP4 0.0.0.0\\r\\n" +
 		"s=-\\r\\n" +
 		"t=0 0\\r\\n" +
 		"a=fingerprint:sha-256 4E:53:20:94:6D:C6:7E:58:7C:8E:F1:08:2A:38:74:59:BF:73:48:56:AB:4D:3F:48:F1:B4:9F:B4:AF:2E:76:75\\r\\n" +
-		"a=group:BUNDLE sdparta_0\\r\\n" +
+		"a=group:BUNDLE sdparta_0 sdparta_1\\r\\n" +
 		"a=ice-options:trickle\\r\\n" +
 		"a=ice-lite\\r\\n" +
 		"a=msid-semantic:WMS *\\r\\n" +
+		"m=audio 9 UDP/TLS/RTP/SAVPF 109\\r\\n" +
+		"c=IN IP4 0.0.0.0\\r\\n" +
+		"a=sendrecv\\r\\n" +
+		"a=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level\\r\\n" +
+		"a=extmap:3 urn:ietf:params:rtp-hdrext:sdes:mid\\r\\n" +
+		"a=fmtp:109 maxplaybackrate=48000;stereo=1;useinbandfec=1\\r\\n" +
+		"a=ice-pwd:abcdefabcdefabcdefabcdefabcdefab\\r\\n" +
+		"a=ice-ufrag:fedcbafe\\r\\n" +
+		"a=mid:sdparta_0\\r\\n" +
+		"a=rtcp-mux\\r\\n" +
+		"a=rtpmap:109 opus/48000/2\\r\\n" +
+		"a=setup:passive\\r\\n" +
 		"m=video 9 UDP/TLS/RTP/SAVPF 120\\r\\n" +
 		"c=IN IP4 0.0.0.0\\r\\n" +
 		"a=sendrecv\\r\\n" +
@@ -40,7 +52,7 @@ var (
 		"a=fmtp:120 max-fs=12288;max-fr=60\\r\\n" +
 		"a=ice-pwd:abcdefabcdefabcdefabcdefabcdefab\\r\\n" +
 		"a=ice-ufrag:fedcbafe\\r\\n" +
-		"a=mid:sdparta_0\\r\\n" +
+		"a=mid:sdparta_1\\r\\n" +
 		"a=rtcp-fb:120 nack\\r\\n" +
 		"a=rtcp-fb:120 nack pli\\r\\n" +
 		"a=rtcp-fb:120 ccm fir\\r\\n" +
