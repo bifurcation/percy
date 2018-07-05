@@ -165,6 +165,29 @@ func (mdd *MDD) handleSTUN(addr *net.UDPAddr, msg []byte) {
 	}
 }
 
+func (mdd *MDD) handleSRTP(assocID AssociationID, msg []byte) {
+	log.Printf("Handling SRTP: %x", msg)
+
+	// Decode the packet
+	session, ok := mdd.rtpSessions[assocID]
+	if !ok {
+		log.Printf("Got an SRTP packet with no RTP session set up")
+		return
+	}
+
+	_, err := session.Decode(msg)
+	if err != nil {
+		log.Printf("Error decoding RTP packet: %v", err)
+		return
+	}
+
+	log.Printf("Successfully decrypted / decoded packet")
+
+	// TODO: Do something with the decoded packet
+
+	mdd.broadcast(assocID, msg)
+}
+
 func (mdd *MDD) Listen(port int) error {
 	var err error
 
@@ -216,8 +239,8 @@ func (mdd *MDD) Listen(port int) error {
 			//      just filter unknown clients here.
 			if _, ok := mdd.clients[assocID]; !ok {
 				mdd.clients[assocID] = pkt.addr
-				// setup a RTP Session handle
-				mdd.rtpSessions[assocID] = rtp.NewRTPSession()
+				session := rtp.NewRTPSession()
+				mdd.rtpSessions[assocID] = session
 			}
 
 			// XXX: For now, all packets are re-broadcast, which means
@@ -235,7 +258,7 @@ func (mdd *MDD) Listen(port int) error {
 			case packetClassDTLS:
 				mdd.handleDTLS(assocID, pkt.msg)
 			case packetClassSRTP:
-				mdd.broadcast(assocID, pkt.msg)
+				mdd.handleSRTP(assocID, pkt.msg)
 			case packetClassSTUN:
 				mdd.handleSTUN(pkt.addr, pkt.msg)
 			case packetClassHBHKey:
@@ -261,7 +284,30 @@ func (mdd *MDD) Send(assocID AssociationID, msg []byte) error {
 }
 
 func (mdd *MDD) SetKeys(assocID AssociationID, keys HBHKeys) error {
-	log.Printf("       --- MD setting keys for %v", assocID)
+	session, ok := mdd.rtpSessions[assocID]
+	if !ok {
+		return fmt.Errorf("Got SetKeys without an RTP session")
+	}
+
+	var cipher rtp.CipherID
+	switch rtp.CipherID(keys.Profile) {
+	case rtp.DOUBLE_AEAD_AES_128_GCM_AEAD_AES_128_GCM:
+		cipher = rtp.SRTP_AEAD_AES_128_GCM
+	case rtp.DOUBLE_AEAD_AES_256_GCM_AEAD_AES_256_GCM:
+		cipher = rtp.SRTP_AEAD_AES_256_GCM
+	default:
+		return fmt.Errorf("Unsupported SRTP protection profile")
+	}
+
+	log.Printf(" --- MD setting client write key for [%04x]: %x %x",
+		assocID, keys.ClientWriteKey, keys.MasterSalt)
+
+	err := session.SetSRTP(cipher, true, keys.ClientWriteKey, keys.MasterSalt)
+	if err != nil {
+		log.Printf("Error setting session read key: %v", err)
+		return err
+	}
+
 	mdd.keys[assocID] = keys
 	return nil
 }
