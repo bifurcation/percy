@@ -2,6 +2,7 @@ package percy
 
 import (
 	"github.com/fluffy/rtp"
+	"time"
 )
 
 const (
@@ -14,59 +15,91 @@ type ClientID uint64
 /* This uniquely identifies the confernce the Client is in */
 type ConfID uint32
 
+// this keeps track of the energy levels from singl speaker in a confernces 
 type SFUClient struct {
-     lastEnergy  float32
-     lastEnergyTime float32
-     energy   float32
+	lastEnergy     float32 // in dB below zero
+	lastEnergyTime time.Time
+	energy         float32 // in dB below zero
 }
 
-
+// this keep strack of all the clients in a confernce 
 type SFUConf struct {
-	clientList     map[ClientID]SFUClient
+	clientList     map[ClientID]*SFUClient
 	activeSpeaker  ClientID
 	prevSpeaker    ClientID
 	otherSpeakers  []ClientID
 	tryingSpeakers []ClientID
 }
 
+// this is a singleton to keep track of all the conferences 
 type SFU struct {
 	confIdMap map[ClientID]ConfID
-	muteMap   map[ClientID]bool
-	confMap   map[ConfID]SFUConf
-        audioPTList []uint8 // first one is primary speaker, 2nd the secondary and so on - for now assumes all are opus 
+	confMap   map[ConfID]*SFUConf
+
+	muteMap map[ClientID]bool
+
+	audioPTList []uint8 // first one is primary speaker, 2nd the secondary and so on - for now assumes all are opus
 }
 
-func NewSFU( audioPTList []uint8 ) *SFU {
-     sfu := new( SFU )
-     sfu.audioPTList = audioPTList
-     
-     return sfu
-}
+func NewSFU(audioPTList []uint8) *SFU {
+	sfu := new(SFU)
+	sfu.audioPTList = audioPTList
 
-// adds a clients to a confernence
-func (sfu *SFU) AddClient(conf ConfID, client ClientID) {
-	// TODO
+	return sfu
 }
 
 // removes a client from a conference
-func (sfu *SFU) RemoveClient(conf ConfID, client ClientID) {
-	// TODO
+func (sfu *SFU) RemoveClient(confID ConfID, clientID ClientID) {
+	// remove client from any existing confernces
+	conf, ok := sfu.confMap[confID]
+	if ok {
+		delete(conf.clientList, clientID)
+	}
+	delete(sfu.confIdMap, clientID)
+}
+
+// adds a clients to a confernence
+func (sfu *SFU) AddClient(confID ConfID, clientID ClientID) {
+	//  create confernce if it does not eist
+	conf, ok := sfu.confMap[confID]
+	if !ok {
+		sfu.confMap[confID] = new(SFUConf)
+	}
+
+	sfu.RemoveClient(confID, clientID)
+
+	// add client to this this confernce
+	sfu.confIdMap[clientID] = confID
+	conf.clientList[clientID] = new(SFUClient)
 }
 
 // removes all clients from a confernence
-func (sfu *SFU) StopConf(conf ConfID) {
-	// TODO
+func (sfu *SFU) StopConf(confID ConfID) {
+	conf := sfu.confMap[confID]
+	if conf != nil {
+		for clientID := range conf.clientList {
+			sfu.RemoveClient(confID, clientID)
+		}
+	}
+	sfu.confMap[confID] = nil
 }
 
 // Mute or Unmute a client in a congference
-func (sfu *SFU) Mute(client ClientID, mute bool) {
-	sfu.muteMap[client] = mute
+func (sfu *SFU) Mute(clientID ClientID, mute bool) {
+	sfu.muteMap[clientID] = mute
 }
 
 // Get list of active speakers - first one will be main one, last will be previous speaker
-func (sfu *SFU) ActiveSpeakers(conf ConfID) []ClientID {
+func (sfu *SFU) ActiveSpeakers(confID ConfID) []ClientID {
 	// TODO
-	return nil
+	var ret []ClientID
+	conf, ok := sfu.confMap[confID]
+	if ok {
+		ret = append(ret, conf.activeSpeaker)
+		ret = append(ret, conf.otherSpeakers...)
+		ret = append(ret, conf.prevSpeaker)
+	}
+	return ret
 }
 
 type SendPacket struct {
