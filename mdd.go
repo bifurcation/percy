@@ -114,7 +114,7 @@ func (mdd *MDD) broadcast(assocID AssociationID, msg []byte) {
 
 		_, err := mdd.conn.WriteToUDP(msg, addr)
 		if err != nil {
-			log.Println("Error forwarding packet")
+			log.Printf("Error forwarding packet")
 		}
 	}
 }
@@ -166,26 +166,46 @@ func (mdd *MDD) handleSTUN(addr *net.UDPAddr, msg []byte) {
 }
 
 func (mdd *MDD) handleSRTP(assocID AssociationID, msg []byte) {
-	log.Printf("Handling SRTP: %x", msg)
-
 	// Decode the packet
-	session, ok := mdd.rtpSessions[assocID]
+	sendSession, ok := mdd.rtpSessions[assocID]
 	if !ok {
 		log.Printf("Got an SRTP packet with no RTP session set up")
 		return
 	}
 
-	_, err := session.Decode(msg)
+	pkt, err := sendSession.Decode(msg)
 	if err != nil {
 		log.Printf("Error decoding RTP packet: %v", err)
 		return
 	}
 
-	log.Printf("Successfully decrypted / decoded packet")
+	// Re-encode the packet for each recipient and send
+	for receiver, addr := range mdd.clients {
+		if receiver == assocID {
+			continue
+		}
 
-	// TODO: Do something with the decoded packet
+		recvSession, ok := mdd.rtpSessions[receiver]
+		if !ok {
+			log.Printf("No SRTP session for recipient [%v]", receiver)
+			continue
+		}
 
-	mdd.broadcast(assocID, msg)
+		outPkt := pkt.Clone()
+		msg, err := recvSession.Encode(outPkt)
+		if err != nil {
+			log.Printf("Error encoding packet for [%v] [%v]", receiver, err)
+			continue
+		}
+
+		log.Printf("Client <-- MD for %v[%v] with [%d] bytes", receiver, addr, len(msg))
+
+		_, err = mdd.conn.WriteToUDP(msg, addr)
+		if err != nil {
+			log.Printf("Error forwarding packet to [%v] [%v]", receiver, err)
+			continue
+		}
+	}
 }
 
 func (mdd *MDD) Listen(port int) error {
