@@ -62,7 +62,7 @@ function run() {
 
   page.offerICE.value = "ICE connection state: " + offerer.iceConnectionState;
 
-  navigator.mediaDevices.getUserMedia({video: true, audio: true})
+  navigator.mediaDevices.getUserMedia({video: true, audio: true, fake: true})
     .then(stream => {
       console.log("got local stream");
       page.local.srcObject = stream;
