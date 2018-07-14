@@ -1,7 +1,6 @@
 package percy
 
 import (
-	"github.com/fluffy/rtp"
 	"time"
 )
 
@@ -15,33 +14,31 @@ type ClientID uint64
 /* This uniquely identifies the confernce the Client is in */
 type ConfID uint32
 
-// this keeps track of the energy levels from singl speaker in a confernces 
+// this keeps track of the energy levels from singl speaker in a confernces
 type SFUClient struct {
 	lastEnergy     float32 // in dB below zero
 	lastEnergyTime time.Time
 	energy         float32 // in dB below zero
 }
 
-// this keep strack of all the clients in a confernce 
+// this keep strack of all the clients in a confernce
 type SFUConf struct {
 	clientList     map[ClientID]*SFUClient
-	activeSpeaker  ClientID
-	prevSpeaker    ClientID
-	otherSpeakers  []ClientID
-	tryingSpeakers []ClientID
+	speakers       []ClientID // first is active, second is previos, aditional are extra
+	tryingSpeakers []ClientID // clients trying to become active - TODO - do we need this
 }
 
-// this is a singleton to keep track of all the conferences 
+// this is a singleton to keep track of all the conferences
 type SFU struct {
 	confIdMap map[ClientID]ConfID
 	confMap   map[ConfID]*SFUConf
 
 	muteMap map[ClientID]bool
 
-	audioPTList []uint8 // first one is primary speaker, 2nd the secondary and so on - for now assumes all are opus
+	audioPTList []int8 // first one is primary speaker, 2nd the secondary and so on - for now assumes all are opus
 }
 
-func NewSFU(audioPTList []uint8) *SFU {
+func NewSFU(audioPTList []int8) *SFU {
 	sfu := new(SFU)
 	sfu.audioPTList = audioPTList
 
@@ -89,26 +86,113 @@ func (sfu *SFU) Mute(clientID ClientID, mute bool) {
 	sfu.muteMap[clientID] = mute
 }
 
-// Get list of active speakers - first one will be main one, last will be previous speaker
+// Get list of active speakers - first one will be main one, second will be previous speaker
 func (sfu *SFU) ActiveSpeakers(confID ConfID) []ClientID {
-	// TODO
-	var ret []ClientID
 	conf, ok := sfu.confMap[confID]
-	if ok {
-		ret = append(ret, conf.activeSpeaker)
-		ret = append(ret, conf.otherSpeakers...)
-		ret = append(ret, conf.prevSpeaker)
+	if !ok {
+		return nil
 	}
-	return ret
+
+	return conf.speakers
 }
 
 type SendPacket struct {
-	destination ClientID
-	rtpPacket   *rtp.RTPPacket
+	destClientID ClientID
+	pt           int8
 }
 
 // this processing an incoming packet and returns a list of packet to send to clients
-func (sfu *SFU) ProcessPacket(client ClientID, p *rtp.RTPPacket) []SendPacket {
-	// TODO
+func (sfu *SFU) ProcessPacket(clientID ClientID, audio bool, dBov int8) []SendPacket {
+	var ret []SendPacket
+
+	// is the client in a conference
+	confId, okClient := sfu.confIdMap[clientID]
+	if !okClient {
+		return nil
+	}
+
+	// does the confernces exist
+	conf, okConf := sfu.confMap[confId]
+	if !okConf {
+		return nil
+	}
+
+	// it this client in that confernce
+	client, okClient := conf.clientList[clientID]
+	if !okClient {
+		return nil
+	}
+
+	// is it an audio packet
+	if audio {
+		// this packet is audio
+
+		// update the energy
+		if dBov != 0 {
+			client.updateEnergy(dBov)
+		}
+
+		// update active speaker list
+		conf.updateSpeakers()
+
+		// if it is from an active speaker, send it to others clients
+		for i := range conf.speakers {
+			if conf.speakers[i] == clientID {
+				// send it to all others
+				for destClientID := range conf.clientList {
+					if destClientID != clientID {
+						// send to destClientID
+						var dest SendPacket
+						dest.destClientID = destClientID
+						dest.pt = sfu.audioPTList[i]
+
+						ret = append(ret, dest)
+					}
+				}
+			}
+
+		}
+
+	} else {
+		// assume it is video
+                
+		// if from active speaker, sent to everyone else
+		if conf.speakers[0] == clientID {
+			// send it to all others
+			for destClientID := range conf.clientList {
+				if destClientID != clientID {
+					// send to destClientID
+					var dest SendPacket
+					dest.destClientID = destClientID
+					dest.pt = 0
+
+					ret = append(ret, dest)
+				}
+			}
+		}
+
+		// if from prev speaker, send to active speaker
+		if conf.speakers[1] == clientID {
+			destClientID := conf.speakers[0]
+			if destClientID != clientID {
+				// send to destClientID
+				var dest SendPacket
+				dest.destClientID = destClientID
+				dest.pt = 0
+
+				ret = append(ret, dest)
+			}
+
+		}
+	}
+
 	return nil
+}
+
+func (client *SFUClient) updateEnergy(dBov int8) {
+	// TODO
+}
+
+func (conf *SFUConf) updateSpeakers() {
+	// TODO
 }
