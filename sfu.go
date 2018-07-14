@@ -1,6 +1,7 @@
 package percy
 
 import (
+	"math"
 	"time"
 )
 
@@ -16,16 +17,16 @@ type ConfID uint32
 
 // this keeps track of the energy levels from singl speaker in a confernces
 type SFUClient struct {
-	lastEnergy     float32 // in dB below zero
+	lastEnergy     float64 // in dB below zero
 	lastEnergyTime time.Time
-	energy         float32 // in dB below zero
+	energy         float64 // in dB below zero
 }
 
 // this keep strack of all the clients in a confernce
 type SFUConf struct {
-	clientList     map[ClientID]*SFUClient
-	speakers       []ClientID // first is active, second is previos, aditional are extra
-	tryingSpeakers []ClientID // clients trying to become active - TODO - do we need this
+	clientList             map[ClientID]*SFUClient
+	speakers               []ClientID // first is active, second is previos, aditional are extra
+	activeSpeakerStartTime time.Time
 }
 
 type Destination struct {
@@ -155,11 +156,61 @@ func (sfu *SFU) UpdateEnergy(clientID ClientID, dBov int8) {
 }
 
 func (client *SFUClient) updateEnergy(dBov int8) {
-	// TODO
+	if dBov >= 0 {
+		return
+	}
+	db := float64(dBov)
+
+	now := time.Now()
+	if now.Sub(client.lastEnergyTime) > time.Duration(1500*time.Millisecond) {
+		// just replace old endergy measurements - too old to care
+		client.energy = db
+	} else {
+		// TODO - fix for rolling average later
+		client.energy = math.Max(db, 0.2*db+0.8*client.energy)
+	}
+
+	client.lastEnergy = db
+	client.lastEnergyTime = now
 }
 
 func (sfu *SFU) updateSpeakers(conf *SFUConf) {
-	// TODO
+	if len(conf.speakers) != NumSpeakers {
+		conf.speakers = make([]ClientID, NumSpeakers)
+	}
+
+	// TODO - roll off old speakers
+
+	// build list of trying speakers
+	var trying []ClientID
+	var maxEnergy float64 = -1000.0
+	var maxEnergyClientID ClientID = 0
+
+	for clientID := range conf.clientList {
+		client := conf.clientList[clientID]
+		if client.energy > -35.0 {
+			trying = append(trying, clientID)
+			if client.energy > maxEnergy {
+				maxEnergy = client.energy
+				maxEnergyClientID = clientID
+			}
+		}
+	}
+
+	// figure out active speaker
+	if maxEnergy > -1000.0 {
+		now := time.Now()
+		if now.Sub(conf.activeSpeakerStartTime) > time.Duration(200*time.Millisecond) {
+			if maxEnergyClientID != conf.speakers[0] {
+				// switch active speaker
+				conf.speakers[1] = conf.speakers[0]  // update previos speaker
+				conf.speakers[0] = maxEnergyClientID // new active speaker
+				conf.activeSpeakerStartTime = now
+			}
+		}
+	}
+
+	// TODO figure out other speakers to mix in
 
 }
 
