@@ -230,6 +230,7 @@ func main() {
 	// Start up the web server
 	srv := httpServer()
 
+	fmt.Printf("Now connect to https://localhost:%d/ with a PERC web browser\n", port);
 	fmt.Println("Listening, press <enter> to stop")
 	var input string
 	fmt.Scanln(&input)
