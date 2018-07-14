@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	NumSpeakers = 3
+	NumSpeakers = 2
 )
 
 /* The SessionID uniquely identifiers each session from each endpoint connected to the SFU. If a single user is connected with more than one endpoingpint, they will have differnt ClientID values */
@@ -28,14 +28,25 @@ type SFUConf struct {
 	tryingSpeakers []ClientID // clients trying to become active - TODO - do we need this
 }
 
+type Destination struct {
+	clientID ClientID
+	pt       int8
+}
+
+type Source struct {
+	clientID ClientID
+	pt       int8
+}
+
 // this is a singleton to keep track of all the conferences
 type SFU struct {
 	confIdMap map[ClientID]ConfID
 	confMap   map[ConfID]*SFUConf
-
-	muteMap map[ClientID]bool
+	muteMap   map[ClientID]bool
 
 	audioPTList []int8 // first one is primary speaker, 2nd the secondary and so on - for now assumes all are opus
+
+	fibMap map[Source][]Destination
 }
 
 func NewSFU(audioPTList []int8) *SFU {
@@ -96,77 +107,108 @@ func (sfu *SFU) ActiveSpeakers(confID ConfID) []ClientID {
 	return conf.speakers
 }
 
-type SendPacket struct {
-	destClientID ClientID
-	pt           int8
+// Get Forwarding Map for Packets
+func (sfu *SFU) GetFibEntry(clientID ClientID, pt int8) []Destination {
+
+	if pt != sfu.audioPTList[0] {
+		pt = 0
+	}
+
+	var src Source
+	src.pt = pt
+	src.clientID = clientID
+
+	return sfu.fibMap[src]
 }
 
 // this processing an incoming packet and returns a list of packet to send to clients
-func (sfu *SFU) ProcessPacket(clientID ClientID, audio bool, dBov int8) []SendPacket {
-	var ret []SendPacket
+func (sfu *SFU) UpdateEnergy(clientID ClientID, dBov int8) {
 
 	// is the client in a conference
 	confId, okClient := sfu.confIdMap[clientID]
 	if !okClient {
-		return nil
+		return
 	}
 
 	// does the confernces exist
 	conf, okConf := sfu.confMap[confId]
 	if !okConf {
-		return nil
+		return
 	}
 
 	// it this client in that confernce
 	client, okClient := conf.clientList[clientID]
 	if !okClient {
-		return nil
+		return
 	}
 
-	// is it an audio packet
-	if audio {
-		// this packet is audio
+	// update the energy
+	if dBov != 0 {
+		client.updateEnergy(dBov)
+	}
 
-		// update the energy
-		if dBov != 0 {
-			client.updateEnergy(dBov)
-		}
+	// update active speaker list
+	sfu.updateSpeakers(conf)
 
-		// update active speaker list
-		conf.updateSpeakers()
+	sfu.updateFIB(conf) // TODO - don't update as often
 
-		// if it is from an active speaker, send it to others clients
+}
+
+func (client *SFUClient) updateEnergy(dBov int8) {
+	// TODO
+}
+
+func (sfu *SFU) updateSpeakers(conf *SFUConf) {
+	// TODO
+
+}
+
+func (sfu *SFU) updateFIB(conf *SFUConf) {
+	// do audio forwarnding
+	for clientID := range conf.clientList {
+
+		var destList []Destination
+
+		// if it is from a speaker, send it to others clients
 		for i := range conf.speakers {
 			if conf.speakers[i] == clientID {
 				// send it to all others
 				for destClientID := range conf.clientList {
 					if destClientID != clientID {
 						// send to destClientID
-						var dest SendPacket
-						dest.destClientID = destClientID
+						var dest Destination
+						dest.clientID = destClientID
 						dest.pt = sfu.audioPTList[i]
 
-						ret = append(ret, dest)
+						destList = append(destList, dest)
 					}
 				}
 			}
 
 		}
 
-	} else {
-		// assume it is video
-                
-		// if from active speaker, sent to everyone else
+		var src Source
+		src.pt = 0
+		src.clientID = clientID
+		sfu.fibMap[src] = destList
+
+	}
+
+	// do video forwarnding
+	for clientID := range conf.clientList {
+		var destList []Destination
+
+		// if video from active speaker, sent to everyone else
 		if conf.speakers[0] == clientID {
 			// send it to all others
 			for destClientID := range conf.clientList {
 				if destClientID != clientID {
 					// send to destClientID
-					var dest SendPacket
-					dest.destClientID = destClientID
+					var dest Destination
+					dest.clientID = destClientID
 					dest.pt = 0
 
-					ret = append(ret, dest)
+					destList = append(destList, dest)
 				}
 			}
 		}
@@ -176,23 +218,18 @@ func (sfu *SFU) ProcessPacket(clientID ClientID, audio bool, dBov int8) []SendPa
 			destClientID := conf.speakers[0]
 			if destClientID != clientID {
 				// send to destClientID
-				var dest SendPacket
-				dest.destClientID = destClientID
+				var dest Destination
+				dest.clientID = destClientID
 				dest.pt = 0
 
-				ret = append(ret, dest)
+				destList = append(destList, dest)
 			}
 
 		}
+
+		var src Source
+		src.pt = 0
+		src.clientID = clientID
+		sfu.fibMap[src] = destList
 	}
-
-	return nil
-}
-
-func (client *SFUClient) updateEnergy(dBov int8) {
-	// TODO
-}
-
-func (conf *SFUConf) updateSpeakers() {
-	// TODO
 }
