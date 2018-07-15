@@ -23,11 +23,11 @@ type SFUClient struct {
 }
 
 func NewSFUClient() *SFUClient {
-	client := new(SFUClient )
-	
+	client := new(SFUClient)
+
 	client.lastEnergy = 0.0
 	client.energy = 0.0
-	
+
 	return client
 }
 
@@ -39,10 +39,10 @@ type SFUConf struct {
 }
 
 func NewSFUConf() *SFUConf {
-	conf := new( SFUConf )
-	
-	conf.clientList = make( map[ClientID]*SFUClient ) 
-	conf.speakers = make( []ClientID,1 ) 
+	conf := new(SFUConf)
+
+	conf.clientList = make(map[ClientID]*SFUClient)
+	conf.speakers = make([]ClientID, 1)
 
 	return conf
 }
@@ -71,14 +71,14 @@ type SFU struct {
 func NewSFU(audioPTList []int8) *SFU {
 	sfu := new(SFU)
 
-	sfu.confIdMap = make( map[ClientID]ConfID ) 
-	sfu.confMap = make( map[ConfID]*SFUConf ) 
-	sfu.muteMap = make( map[ClientID]bool ) 
-	
+	sfu.confIdMap = make(map[ClientID]ConfID)
+	sfu.confMap = make(map[ConfID]*SFUConf)
+	sfu.muteMap = make(map[ClientID]bool)
+
 	sfu.audioPTList = audioPTList
 
-	sfu.fibMap = make( map[Source][]Destination ) 
-	
+	sfu.fibMap = make(map[Source][]Destination)
+
 	return sfu
 }
 
