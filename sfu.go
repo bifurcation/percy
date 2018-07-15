@@ -22,11 +22,29 @@ type SFUClient struct {
 	energy         float64 // in dB below zero
 }
 
+func NewSFUClient() *SFUClient {
+	client := new(SFUClient )
+	
+	client.lastEnergy = 0.0
+	client.energy = 0.0
+	
+	return client
+}
+
 // this keep strack of all the clients in a confernce
 type SFUConf struct {
 	clientList             map[ClientID]*SFUClient
 	speakers               []ClientID // first is active, second is previos, aditional are extra
 	activeSpeakerStartTime time.Time
+}
+
+func NewSFUConf() *SFUConf {
+	conf := new( SFUConf )
+	
+	conf.clientList = make( map[ClientID]*SFUClient ) 
+	conf.speakers = make( []ClientID,1 ) 
+
+	return conf
 }
 
 type Destination struct {
@@ -52,8 +70,15 @@ type SFU struct {
 
 func NewSFU(audioPTList []int8) *SFU {
 	sfu := new(SFU)
+
+	sfu.confIdMap = make( map[ClientID]ConfID ) 
+	sfu.confMap = make( map[ConfID]*SFUConf ) 
+	sfu.muteMap = make( map[ClientID]bool ) 
+	
 	sfu.audioPTList = audioPTList
 
+	sfu.fibMap = make( map[Source][]Destination ) 
+	
 	return sfu
 }
 
@@ -69,17 +94,18 @@ func (sfu *SFU) RemoveClient(confID ConfID, clientID ClientID) {
 
 // adds a clients to a confernence
 func (sfu *SFU) AddClient(confID ConfID, clientID ClientID) {
-	//  create confernce if it does not eist
+	//  create confernce if it does not exist
 	conf, ok := sfu.confMap[confID]
 	if !ok {
-		sfu.confMap[confID] = new(SFUConf)
+		conf = NewSFUConf()
+		sfu.confMap[confID] = conf
 	}
-
-	sfu.RemoveClient(confID, clientID)
 
 	// add client to this this confernce
 	sfu.confIdMap[clientID] = confID
-	conf.clientList[clientID] = new(SFUClient)
+
+	client := NewSFUClient()
+	conf.clientList[clientID] = client
 }
 
 // removes all clients from a confernence
