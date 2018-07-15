@@ -17,6 +17,7 @@ type dtlsSRTPPacketClass uint8
 const (
 	packetClassDTLS dtlsSRTPPacketClass = iota
 	packetClassSRTP
+	packetClassSRTCP
 	packetClassSTUN
 	packetClassHBHKey
 	packetClassUnknown
@@ -33,6 +34,11 @@ func packetClass(msg []byte) dtlsSRTPPacketClass {
 	B := msg[0]
 	switch {
 	case 127 < B && B < 192:
+		PT := msg[1]
+		if PT >= 200 && PT <= 205 {
+			return packetClassSRTCP
+		}
+
 		return packetClassSRTP
 	case 19 < B && B < 64:
 		return packetClassDTLS
@@ -112,7 +118,7 @@ func (mdd *MDD) broadcast(assocID AssociationID, msg []byte) {
 			continue
 		}
 
-		log.Printf("Client <-- MD for %v[%v] with [%d] bytes", client, addr, len(msg))
+		//log.Printf("Client <-- MD for %v[%v] with [%d] bytes", client, addr, len(msg))
 
 		_, err := mdd.conn.WriteToUDP(msg, addr)
 		if err != nil {
@@ -168,6 +174,10 @@ func (mdd *MDD) handleSTUN(addr *net.UDPAddr, msg []byte) {
 }
 
 func (mdd *MDD) handleSRTP(assocID AssociationID, msg []byte) {
+	if msg[len(msg)-1] != 0x00 && msg[len(msg)-1] != 0x02 {
+		log.Printf("Got non-EKT SRTP packet: %x", msg)
+	}
+
 	// Decode the packet
 	sendSession, ok := mdd.recvSessions[assocID]
 	if !ok {
@@ -200,7 +210,7 @@ func (mdd *MDD) handleSRTP(assocID AssociationID, msg []byte) {
 			continue
 		}
 
-		log.Printf("Client <-- MD for %v[%v] with [%d] bytes: %x", receiver, addr, len(msg), msg)
+		//log.Printf("Client <-- MD for %v[%v] with [%d] bytes: %x", receiver, addr, len(msg), msg)
 
 		_, err = mdd.conn.WriteToUDP(msg, addr)
 		if err != nil {
@@ -228,8 +238,15 @@ func (mdd *MDD) Listen(port int) error {
 			n, addr, err := mdd.conn.ReadFromUDP(buf)
 
 			if err == nil {
-				packetChan <- packet{addr: addr, msg: buf[:n]}
+				pkt := packet{
+					addr: addr,
+					msg:  make([]byte, n),
+				}
+				copy(pkt.msg, buf[:n])
+
+				packetChan <- pkt
 			}
+
 			// TODO log errors
 		}
 	}(mdd.packetChan)
@@ -254,7 +271,7 @@ func (mdd *MDD) Listen(port int) error {
 
 			assocID := addrToAssoc(pkt.addr)
 
-			log.Printf("Client --> MD for %v[%v] with [%d] bytes", assocID, pkt.addr, len(pkt.msg))
+			//log.Printf("Client --> MD for %v[%v] with [%d] bytes", assocID, pkt.addr, len(pkt.msg))
 
 			// Remember the client if it's new
 			// XXX: Could have an interface to add/remove clients, then
@@ -285,6 +302,8 @@ func (mdd *MDD) Listen(port int) error {
 				mdd.handleSTUN(pkt.addr, pkt.msg)
 			case packetClassHBHKey:
 				mdd.handleHBHKey(assocID, pkt.msg)
+			case packetClassSRTCP:
+				log.Printf("Received SRTP")
 			default:
 				log.Printf("Unknown packet type received")
 			}
@@ -296,7 +315,7 @@ func (mdd *MDD) Listen(port int) error {
 
 func (mdd *MDD) Send(assocID AssociationID, msg []byte) error {
 	addr, ok := mdd.clients[assocID]
-	log.Printf("Client <-- MD for %v[%v] with [%d] bytes", assocID, addr, len(msg))
+	// log.Printf("Client <-- MD for %v[%v] with [%d] bytes", assocID, addr, len(msg))
 	if !ok {
 		return fmt.Errorf("Unknown client [%04x]", assocID)
 	}
