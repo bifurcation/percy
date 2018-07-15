@@ -10,7 +10,7 @@ import (
 	"github.com/fluffy/rtp"
 )
 
-type AssociationID uint16
+type AssociationID uint32
 
 type dtlsSRTPPacketClass uint8
 
@@ -72,6 +72,8 @@ type MDD struct {
 	keys     map[AssociationID]HBHKeys
 	profile  ProtectionProfile
 	profiles []ProtectionProfile
+
+	sfu       *SFU;
 	// TODO add some mutexes
 }
 
@@ -90,6 +92,9 @@ func NewMDD() *MDD {
 	mdd.profiles = []ProtectionProfile{}
 	mdd.keys = map[AssociationID]HBHKeys{}
 
+	ptList := []int8{ 108 } // TODO - sort out hard coded audio PT 
+	mdd.sfu = NewSFU( ptList ) 
+	
 	return mdd
 }
 
@@ -179,8 +184,22 @@ func (mdd *MDD) handleSRTP(assocID AssociationID, msg []byte) {
 		return
 	}
 
+	// update energy levels for incoming packet
+	_, dBov := pkt.GetExtClientVolume(sendSession)
+	mdd.sfu.UpdateEnergy( ClientID(assocID) , dBov )
+	destinationList := mdd.sfu.GetFibEntry( ClientID(assocID), pkt.GetPT() ) 
+
+	if ( pkt.GetPT() == 109 ) {
+		// TODO remove
+		log.Printf("dBov: %v", dBov)
+	}
+	
 	// Re-encode the packet for each recipient and send
-	for receiver, addr := range mdd.clients {
+	//for receiver, addr := range mdd.clients {
+	for  clientID := range destinationList {
+		receiver := AssociationID( clientID )
+		addr := mdd.clients[ receiver ]
+		
 		if receiver == assocID {
 			continue
 		}
