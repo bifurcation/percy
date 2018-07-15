@@ -101,6 +101,7 @@ func NewMDD() *MDD {
 func (mdd *MDD) handleDTLS(assocID AssociationID, msg []byte) {
 	// TODO Notify the KD of supported SRTP profiles
 	mdd.KD.Send(assocID, msg)
+	mdd.sfu.AddClient( ConfID(1) , ClientID( assocID ) ) 
 }
 
 func (mdd *MDD) handleHBHKey(assocID AssociationID, msg []byte) {
@@ -192,6 +193,7 @@ func (mdd *MDD) handleSRTP(assocID AssociationID, msg []byte) {
 	if ( pkt.GetPT() == 109 ) {
 		// TODO remove
 		log.Printf("dBov: %v", dBov)
+		dBov = -10 
 	}
 	
 	// Re-encode the packet for each recipient and send
