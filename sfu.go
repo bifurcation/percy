@@ -145,7 +145,9 @@ func (sfu *SFU) GetFibEntry(clientID ClientID, pt int8) []Destination {
 	src.pt = pt
 	src.clientID = clientID
 
-	return sfu.fibMap[src]
+	ret := sfu.fibMap[src]
+
+	return ret
 }
 
 // this processing an incoming packet and returns a list of packet to send to clients
@@ -205,6 +207,8 @@ func (sfu *SFU) updateSpeakers(conf *SFUConf) {
 		conf.speakers = make([]ClientID, NumSpeakers)
 	}
 
+	// TODO - ignore muted speakers
+
 	// TODO - roll off old speakers
 
 	// build list of trying speakers
@@ -242,8 +246,8 @@ func (sfu *SFU) updateSpeakers(conf *SFUConf) {
 
 func (sfu *SFU) updateFIB(conf *SFUConf) {
 	// do audio forwarnding
-	for clientID := range conf.clientList {
 
+	for clientID := range conf.clientList {
 		var destList []Destination
 
 		// if it is from a speaker, send it to others clients
@@ -255,7 +259,7 @@ func (sfu *SFU) updateFIB(conf *SFUConf) {
 						// send to destClientID
 						var dest Destination
 						dest.clientID = destClientID
-						dest.pt = sfu.audioPTList[i]
+						dest.pt = sfu.audioPTList[0]
 
 						destList = append(destList, dest)
 					}
@@ -265,7 +269,7 @@ func (sfu *SFU) updateFIB(conf *SFUConf) {
 		}
 
 		var src Source
-		src.pt = 0
+		src.pt = sfu.audioPTList[0]
 		src.clientID = clientID
 		sfu.fibMap[src] = destList
 
