@@ -58,15 +58,16 @@ func addrToAssoc(addr *net.UDPAddr) AssociationID {
 }
 
 type MDD struct {
-	name        string
-	addr        *net.UDPAddr
-	conn        *net.UDPConn
-	clients     map[AssociationID]*net.UDPAddr
-	rtpSessions map[AssociationID]*rtp.RTPSession
-	stopChan    chan bool
-	doneChan    chan bool
-	packetChan  chan packet
-	timeout     time.Duration
+	name         string
+	addr         *net.UDPAddr
+	conn         *net.UDPConn
+	clients      map[AssociationID]*net.UDPAddr
+	recvSessions map[AssociationID]*rtp.RTPSession
+	sendSessions map[AssociationID]*rtp.RTPSession
+	stopChan     chan bool
+	doneChan     chan bool
+	packetChan   chan packet
+	timeout      time.Duration
 
 	KD       KMFTunnel
 	keys     map[AssociationID]HBHKeys
@@ -81,7 +82,8 @@ func NewMDD() *MDD {
 	mdd := new(MDD)
 	mdd.name = "mdd"
 	mdd.clients = map[AssociationID]*net.UDPAddr{}
-	mdd.rtpSessions = map[AssociationID]*rtp.RTPSession{}
+	mdd.recvSessions = map[AssociationID]*rtp.RTPSession{}
+	mdd.sendSessions = map[AssociationID]*rtp.RTPSession{}
 	mdd.timeout = 10 * time.Millisecond
 
 	mdd.stopChan = make(chan bool)
@@ -173,7 +175,7 @@ func (mdd *MDD) handleSTUN(addr *net.UDPAddr, msg []byte) {
 
 func (mdd *MDD) handleSRTP(assocID AssociationID, msg []byte) {
 	// Decode the packet
-	sendSession, ok := mdd.rtpSessions[assocID]
+	sendSession, ok := mdd.recvSessions[assocID]
 	if !ok {
 		log.Printf("Got an SRTP packet with no RTP session set up")
 		return
@@ -206,7 +208,7 @@ func (mdd *MDD) handleSRTP(assocID AssociationID, msg []byte) {
 			continue
 		}
 
-		recvSession, ok := mdd.rtpSessions[receiver]
+		recvSession, ok := mdd.sendSessions[receiver]
 		if !ok {
 			log.Printf("No SRTP session for recipient [%v]", receiver)
 			continue
@@ -219,7 +221,7 @@ func (mdd *MDD) handleSRTP(assocID AssociationID, msg []byte) {
 			continue
 		}
 
-		log.Printf("Client <-- MD for %v[%v] with [%d] bytes", receiver, addr, len(msg))
+		log.Printf("Client <-- MD for %v[%v] with [%d] bytes: %x", receiver, addr, len(msg), msg)
 
 		_, err = mdd.conn.WriteToUDP(msg, addr)
 		if err != nil {
@@ -280,8 +282,8 @@ func (mdd *MDD) Listen(port int) error {
 			//      just filter unknown clients here.
 			if _, ok := mdd.clients[assocID]; !ok {
 				mdd.clients[assocID] = pkt.addr
-				session := rtp.NewRTPSession()
-				mdd.rtpSessions[assocID] = session
+				mdd.recvSessions[assocID] = rtp.NewRTPSession()
+				mdd.sendSessions[assocID] = rtp.NewRTPSession()
 			}
 
 			// XXX: For now, all packets are re-broadcast, which means
@@ -325,11 +327,6 @@ func (mdd *MDD) Send(assocID AssociationID, msg []byte) error {
 }
 
 func (mdd *MDD) SetKeys(assocID AssociationID, keys HBHKeys) error {
-	session, ok := mdd.rtpSessions[assocID]
-	if !ok {
-		return fmt.Errorf("Got SetKeys without an RTP session")
-	}
-
 	var cipher rtp.CipherID
 	switch rtp.CipherID(keys.Profile) {
 	case rtp.DOUBLE_AEAD_AES_128_GCM_AEAD_AES_128_GCM:
@@ -340,10 +337,31 @@ func (mdd *MDD) SetKeys(assocID AssociationID, keys HBHKeys) error {
 		return fmt.Errorf("Unsupported SRTP protection profile")
 	}
 
-	log.Printf(" --- MD setting client write key for [%04x]: %x %x",
+	// Set up receive session
+	recvSession, ok := mdd.recvSessions[assocID]
+	if !ok {
+		return fmt.Errorf("Got SetKeys without an RTP session")
+	}
+
+	log.Printf(" --- MD setting SRTP recv key for [%04x]: %x %x",
 		assocID, keys.ClientWriteKey, keys.MasterSalt)
 
-	err := session.SetSRTP(cipher, true, keys.ClientWriteKey, keys.MasterSalt)
+	err := recvSession.SetSRTP(cipher, true, keys.ClientWriteKey, keys.MasterSalt)
+	if err != nil {
+		log.Printf("Error setting session read key: %v", err)
+		return err
+	}
+
+	// Set up send session
+	sendSession, ok := mdd.sendSessions[assocID]
+	if !ok {
+		return fmt.Errorf("Got SetKeys without an RTP session")
+	}
+
+	log.Printf(" --- MD setting SRTP setnd key for [%04x]: %x %x",
+		assocID, keys.ServerWriteKey, keys.MasterSalt)
+
+	err = sendSession.SetSRTP(cipher, true, keys.ServerWriteKey, keys.MasterSalt)
 	if err != nil {
 		log.Printf("Error setting session read key: %v", err)
 		return err
