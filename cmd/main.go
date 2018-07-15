@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/bifurcation/percy"
@@ -212,6 +213,18 @@ func httpServer() *http.Server {
 //////////
 
 func main() {
+	// Process commandline (currently, just an optional port #)
+	args := os.Args
+	if len(args) >= 2 {
+		val, err := strconv.Atoi(args[1])
+		if err != nil {
+			fmt.Printf("Could not parse '%s' as a port number\n", args[1])
+			panic(err)
+		}
+		port = val
+		fmt.Printf("Setting port to non-default %d\n", port)
+	}
+
 	// Instantiate the interface to the KD
 	kd, err := percy.NewUDPForwarder(kdServer)
 	panicOnError(err)
@@ -230,7 +243,7 @@ func main() {
 	// Start up the web server
 	srv := httpServer()
 
-	fmt.Printf("Now connect to https://localhost:%d/ with a PERC web browser\n", port);
+	fmt.Printf("Now connect to https://localhost:%d/ with a PERC web browser\n", port)
 	fmt.Println("Listening, press <enter> to stop")
 	var input string
 	fmt.Scanln(&input)

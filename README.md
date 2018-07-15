@@ -29,6 +29,7 @@ The overall design has a few pieces:
 > git fetch ekr
 > git checkout -b perc_dtls_server ekr/perc_dtls_server
 > make nss_build_all
+> tests/ssl_gtests/ssl_gtests.sh
 > DYLD_LIBRARY_PATH=../dist/$PLATFORM/lib/ ../dist/$PLATFORM/bin/perc_server
 
 # Pull the appropriate branch of Firefox
