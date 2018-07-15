@@ -303,7 +303,7 @@ func (mdd *MDD) Listen(port int) error {
 			case packetClassHBHKey:
 				mdd.handleHBHKey(assocID, pkt.msg)
 			case packetClassSRTCP:
-				log.Printf("Received SRTP")
+				log.Printf("Received SRTCP")
 			default:
 				log.Printf("Unknown packet type received")
 			}
