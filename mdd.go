@@ -278,8 +278,8 @@ func (mdd *MDD) Listen(port int) error {
 			//      just filter unknown clients here.
 			if _, ok := mdd.clients[assocID]; !ok {
 				mdd.clients[assocID] = pkt.addr
-				mdd.recvSessions[assocID] = rtp.NewRTPSession()
-				mdd.sendSessions[assocID] = rtp.NewRTPSession()
+				mdd.recvSessions[assocID] = rtp.NewRTPSession( false )
+				mdd.sendSessions[assocID] = rtp.NewRTPSession( false )
 			}
 
 			// XXX: For now, all packets are re-broadcast, which means
