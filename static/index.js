@@ -24,7 +24,7 @@ function rewrite(c, host, port) {
 }
 
 function run() {
-  let offerer = new RTCPeerConnection();
+  let pc = new RTCPeerConnection();
 
   console.log("wtf?");
 
@@ -40,9 +40,9 @@ function run() {
   var ice_candidate_is_set = new Promise(r => ice_candidate_set = r);
 
   socket.addEventListener('open', (e) => {
-    offer_is_set.then((offer) => {
-      console.log('Sending offer to percy');
-      socket.send(offer);
+    answer_is_set.then((answer) => {
+      console.log('Sending SDP to percy');
+      socket.send(answer);
     })
   })
 
@@ -51,8 +51,8 @@ function run() {
     message = JSON.parse(e.data);
     if(message.type === "sdp") {
       console.log('SDP from percy: ', message.data);
-      page.answer.value = message.data;
-      answer_set(message.data);
+      page.offer.value = message.data;
+      offer_set(message.data);
     } else if(message.type === "ice") {
       console.log("ice-candidates from percy: ", message.data);
       page.answerICE.value = JSON.stringify(message.data, null, 2) + "\n\n";
@@ -60,49 +60,49 @@ function run() {
     }
   })
 
-  page.offerICE.value = "ICE connection state: " + offerer.iceConnectionState;
+  page.offerICE.value = "ICE connection state: " + pc.iceConnectionState;
 
   navigator.mediaDevices.getUserMedia({video: true, audio: true})
     .then(stream => {
       console.log("got local stream");
       page.local.srcObject = stream;
-      offerer.addStream(stream);
+      pc.addStream(stream);
     });
 
-  offerer.onicecandidate = e => {
+  pc.onicecandidate = e => {
     console.log("dropping local ICE candidate: " + JSON.stringify(e.candidate));
     return;
   }
 
-  offerer.oniceconnectionstatechange = e => {
-    page.offerICE.value = page.offerICE.value + "\nICE connection state: " + offerer.iceConnectionState;
+  pc.oniceconnectionstatechange = e => {
+    page.offerICE.value = page.offerICE.value + "\nICE connection state: " + pc.iceConnectionState;
   }
 
-  offerer.ontrack = e => {
+  pc.ontrack = e => {
     console.log("got remote track");
     page.remote.srcObject = e.streams[0];
   }
 
-  offerer.onnegotiationneeded = e => {
-    offerer.createOffer().then(offer => {
-      console.log("got local offer");
-      page.offer.value = offer.sdp;
-      offer_set(offer.sdp);
-      return offerer.setLocalDescription(offer);
+  pc.onnegotiationneeded = e => {
+    offer_is_set.then((offer) => {
+      console.log("setting percy's SDP");
+      return pc.setRemoteDescription({type: "offer", sdp: offer});
     })
     .then(() => {
-      return answer_is_set;
+      return pc.createAnswer();
     })
     .then((answer) => {
-      console.log("setting percy's SDP answer");
-      return offerer.setRemoteDescription({type: "answer", sdp: answer});
+      console.log("got local SDP");
+      page.answer.value = answer.sdp;
+      answer_set(answer.sdp);
+      return pc.setLocalDescription(answer);
     })
     .then(() => {
       return ice_candidate_is_set;
     })
     .then((candidate) => {
       console.log("adding fake ICE candidates");
-      return offerer.addIceCandidate(new RTCIceCandidate(candidate));
+      return pc.addIceCandidate(new RTCIceCandidate(candidate));
     })
     .catch((error) => {
       console.log(error);

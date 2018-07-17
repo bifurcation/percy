@@ -23,7 +23,7 @@ var (
 	jsFilename   = "../static/index.js"
 	portField    = "RELAY_PORT_FROM_GO_SERVER"
 	kdServer     = "localhost:4433"
-	sdp_answer   = []byte("{\"type\": \"sdp\", \"data\":\"v=0\\r\\n" +
+	sdp_offer    = []byte("{\"type\": \"sdp\", \"data\":\"v=0\\r\\n" +
 		"o=percy0.3 2633292546686233323 0 IN IP4 0.0.0.0\\r\\n" +
 		"s=-\\r\\n" +
 		"t=0 0\\r\\n" +
@@ -145,8 +145,23 @@ func httpServer() *http.Server {
 			return
 		}
 		defer c.Close()
+
+		err = c.WriteMessage(websocket.TextMessage, sdp_offer)
+		if err != nil {
+			fmt.Println("write:", err)
+			return
+		}
+
+		ice_candidate_answer := []byte("{\"type\": \"ice\", \"data\":{\"candidate\": \"candidate:0 1 UDP 2122121471 " + hostVal + " " + portVal + " typ host\",\"sdpMid\": \"sdparta_0\",\"sdpMLineIndex\": 0}}")
+
+		err = c.WriteMessage(websocket.TextMessage, ice_candidate_answer)
+		if err != nil {
+			fmt.Println("write:", err)
+			return
+		}
+
 		for {
-			mt, message, err := c.ReadMessage()
+			_, message, err := c.ReadMessage()
 			if err != nil {
 				fmt.Println("read:", err)
 				break
@@ -186,20 +201,6 @@ func httpServer() *http.Server {
 			ice_ufrag := m.Medias[0].Attributes["ice-ufrag"][0]
 			fmt.Println("Media[0].ice-pwd: ", ice_pwd)
 			fmt.Println("Media[0].ice-ufrag: ", ice_ufrag)
-
-			err = c.WriteMessage(mt, sdp_answer)
-			if err != nil {
-				fmt.Println("write:", err)
-				break
-			}
-
-			ice_candidate_answer := []byte("{\"type\": \"ice\", \"data\":{\"candidate\": \"candidate:0 1 UDP 2122121471 " + hostVal + " " + portVal + " typ host\",\"sdpMid\": \"sdparta_0\",\"sdpMLineIndex\": 0}}")
-
-			err = c.WriteMessage(mt, ice_candidate_answer)
-			if err != nil {
-				fmt.Println("write:", err)
-				break
-			}
 		}
 	})
 
