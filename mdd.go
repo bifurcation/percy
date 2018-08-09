@@ -220,6 +220,59 @@ func (mdd *MDD) handleSRTP(assocID AssociationID, msg []byte) {
 	}
 }
 
+func (mdd *MDD) handleSRTCP(assocID AssociationID, msg []byte) {
+	log.Printf("Received SRTCP")
+
+	// Decode the packet
+	sendSession, ok := mdd.recvSessions[assocID]
+	if !ok {
+		log.Printf("Got an SRTP packet with no RTP session set up")
+		return
+	}
+
+	pkt, err := sendSession.DecodeRTCP(msg)
+	if err != nil {
+		log.Printf("Error decoding RTP packet: %v", err)
+		return
+	}
+
+	// Only send receiver reports
+	if pkt.GetHeader().GetPT() != rtp.RTCPTypeRR {
+		return
+	}
+
+	log.Printf("Received RTCP Receiver Report")
+
+	// Re-encode the packet for each recipient and send
+	for receiver, addr := range mdd.clients {
+		if receiver == assocID {
+			continue
+		}
+
+		recvSession, ok := mdd.sendSessions[receiver]
+		if !ok {
+			log.Printf("No SRTCP session for recipient [%v]", receiver)
+			continue
+		}
+
+		outPkt := pkt.Clone()
+		msg, err := recvSession.EncodeRTCP(outPkt)
+		if err != nil {
+			log.Printf("Error encoding packet for [%v] [%v]", receiver, err)
+			continue
+		}
+
+		//log.Printf("Client <-- MD for %v[%v] with [%d] bytes: %x", receiver, addr, len(msg), msg)
+
+		_, err = mdd.conn.WriteToUDP(msg, addr)
+		if err != nil {
+			log.Printf("Error forwarding packet to [%v] [%v]", receiver, err)
+			continue
+		}
+	}
+
+}
+
 func (mdd *MDD) Listen(port int) error {
 	var err error
 
@@ -278,8 +331,8 @@ func (mdd *MDD) Listen(port int) error {
 			//      just filter unknown clients here.
 			if _, ok := mdd.clients[assocID]; !ok {
 				mdd.clients[assocID] = pkt.addr
-				mdd.recvSessions[assocID] = rtp.NewRTPSession( false )
-				mdd.sendSessions[assocID] = rtp.NewRTPSession( false )
+				mdd.recvSessions[assocID] = rtp.NewRTPSession(false)
+				mdd.sendSessions[assocID] = rtp.NewRTPSession(false)
 			}
 
 			// XXX: For now, all packets are re-broadcast, which means
@@ -303,7 +356,7 @@ func (mdd *MDD) Listen(port int) error {
 			case packetClassHBHKey:
 				mdd.handleHBHKey(assocID, pkt.msg)
 			case packetClassSRTCP:
-				log.Printf("Received SRTCP")
+				mdd.handleSRTCP(assocID, pkt.msg)
 			default:
 				log.Printf("Unknown packet type received")
 			}
